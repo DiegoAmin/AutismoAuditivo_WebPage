@@ -4,16 +4,7 @@ import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const StarIcon = ({ filled, size = 22 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill={filled ? "currentColor" : "none"}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
   </svg>
 );
@@ -26,42 +17,92 @@ export const Reviews = () => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
+  
+  // Estados para el buscador de canciones y álbumes
+  const [favoriteTracks, setFavoriteTracks] = useState([]); // Máximo 3
+  const [trackQuery, setTrackQuery] = useState("");
+  const [trackResults, setTrackResults] = useState([]);
+
+  const [favoriteAlbum, setFavoriteAlbum] = useState(null); // 1 álbum
+  const [albumQuery, setAlbumQuery] = useState("");
+  const [albumResults, setAlbumResults] = useState([]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-
     const unsubArtist = onSnapshot(doc(db, "globals", "general"), (docSnap) => {
       if (docSnap.exists()) setCurrentArtist(docSnap.data());
     });
-
     const unsubReviews = onSnapshot(collection(db, "reviews"), (snapshot) => {
-      const allReviews = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setReviews(allReviews);
+      setReviews(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-
-    return () => {
-      unsubArtist();
-      unsubReviews();
-    };
+    return () => { unsubArtist(); unsubReviews(); };
   }, [user]);
 
   const artistReviews = reviews
     .filter(r => r.artistName === currentArtist?.name)
     .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
 
-  // Si el usuario ya había opinado sobre este artista, precargamos sus datos para que pueda editarlos
   useEffect(() => {
     if (!user || !currentArtist?.name) return;
     const myReview = artistReviews.find(r => r.userId === user.uid);
     if (myReview) {
       setRating(myReview.rating);
-      setComment(myReview.comment);
+      setComment(myReview.comment || "");
+      setFavoriteTracks(myReview.favoriteTracks || []);
+      setFavoriteAlbum(myReview.favoriteAlbum || null);
     } else {
       setRating(0);
       setComment("");
+      setFavoriteTracks([]);
+      setFavoriteAlbum(null);
     }
   }, [currentArtist?.name, user, reviews.length]);
+
+  // Buscar canciones en tiempo real en la API
+  useEffect(() => {
+    if (!trackQuery.trim() || trackQuery.length < 2) {
+      setTrackResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/spotify?searchTrack=${encodeURIComponent(trackQuery)}`);
+        const data = await res.json();
+        if (Array.isArray(data)) setTrackResults(data);
+      } catch (err) { console.error(err); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [trackQuery]);
+
+  // Buscar álbumes en tiempo real en la API
+  useEffect(() => {
+    if (!albumQuery.trim() || albumQuery.length < 2) {
+      setAlbumResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/spotify?searchAlbum=${encodeURIComponent(albumQuery)}`);
+        const data = await res.json();
+        if (Array.isArray(data)) setAlbumResults(data);
+      } catch (err) { console.error(err); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [albumQuery]);
+
+  const addTrack = (track) => {
+    if (favoriteTracks.length >= 3) return alert("Solo puedes elegir 3 canciones top.");
+    if (favoriteTracks.some(t => t.name === track.name)) return;
+    setFavoriteTracks([...favoriteTracks, track]);
+    setTrackQuery("");
+    setTrackResults([]);
+  };
+
+  const removeTrack = (index) => {
+    setFavoriteTracks(favoriteTracks.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,183 +119,170 @@ export const Reviews = () => {
         userName: user.displayName || "Usuario",
         rating: rating,
         comment: comment.trim(),
+        favoriteTracks: favoriteTracks,
+        favoriteAlbum: favoriteAlbum,
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error("Error al guardar la reseña:", error);
+      console.error("Error al guardar reseña:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (reviewId) => {
-    const confirmacion = window.confirm("¿Seguro que deseas eliminar esta reseña?");
-    if (!confirmacion) return;
-    try {
-      await deleteDoc(doc(db, "reviews", reviewId));
-    } catch (error) {
-      console.error("Error al eliminar reseña:", error);
-    }
+    if (!window.confirm("¿Eliminar esta reseña?")) return;
+    try { await deleteDoc(doc(db, "reviews", reviewId)); } catch (e) { console.error(e); }
   };
 
   const isArtistValid = currentArtist && currentArtist.name;
-
   const averageRating = artistReviews.length > 0
     ? (artistReviews.reduce((acc, r) => acc + r.rating, 0) / artistReviews.length).toFixed(1)
     : null;
 
   return (
-    <main className="page-container">
-      {/* Encabezado y Promedio General */}
+    <main className="page-container" style={{ maxWidth: "900px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "1rem", marginBottom: "1.75rem" }}>
         <div>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
-            Foro de discusión
-          </p>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>
-            {isArtistValid ? `Opiniones: ${currentArtist.name}` : "Opiniones de la Semana"}
-          </h1>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Foro de discusión</p>
+          <h1 className="page-title" style={{ marginBottom: 0 }}>{isArtistValid ? `Opiniones: ${currentArtist.name}` : "Opiniones"}</h1>
         </div>
-
         {averageRating && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.6rem",
-            backgroundColor: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            padding: "0.5rem 1rem",
-            borderRadius: "12px"
-          }}>
-            <span style={{ color: "var(--accent-amber)", display: "flex" }}>
-              <StarIcon filled={true} size={20} />
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", backgroundColor: "var(--bg-card)", border: "1px solid var(--border)", padding: "0.5rem 1rem", borderRadius: "12px" }}>
+            <span style={{ color: "var(--accent-amber)" }}><StarIcon filled={true} size={20} /></span>
             <span style={{ fontSize: "1.25rem", fontWeight: 800 }}>{averageRating}</span>
-            <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-              ({artistReviews.length} {artistReviews.length === 1 ? "voto" : "votos"})
-            </span>
+            <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>({artistReviews.length})</span>
           </div>
         )}
       </div>
 
       {!isArtistValid ? (
-        <div className="card" style={{ textAlign: "center", padding: "3.5rem 1.5rem" }}>
-          <p style={{ color: "var(--text-muted)", fontSize: "1.05rem" }}>
-            Aún no hay un artista activo para reseñar esta semana.
-          </p>
-        </div>
+        <div className="card" style={{ textAlign: "center", padding: "3.5rem" }}><p style={{ color: "var(--text-muted)" }}>Sin artista activo.</p></div>
       ) : (
         <>
-          {/* Formulario para calificar y comentar */}
           <section className="card" style={{ marginBottom: "2rem" }}>
             <form onSubmit={handleSubmit}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
+              {/* Estrellas */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
                 <div>
-                  <h3 style={{ fontSize: "1rem", fontWeight: 600 }}>Tu evaluación</h3>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                    Selecciona una calificación de 1 a 5 estrellas
-                  </p>
+                  <h3 style={{ fontSize: "1rem", fontWeight: 600 }}>Tu calificación</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>De 1 a 5 estrellas</p>
                 </div>
-
                 <div className="star-rating" onMouseLeave={() => setHoverRating(0)}>
-                  {[1, 2, 3, 4, 5].map((star) => {
-                    const isFilled = star <= (hoverRating || rating);
-                    return (
-                      <button
-                        key={star}
-                        type="button"
-                        className={`star-btn ${isFilled ? "active" : ""}`}
-                        onClick={() => setRating(star)}
-                        onMouseEnter={() => setHoverRating(star)}
-                        aria-label={`Calificar con ${star} estrellas`}
-                      >
-                        <StarIcon filled={isFilled} size={26} />
-                      </button>
-                    );
-                  })}
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button key={star} type="button" className={`star-btn ${star <= (hoverRating || rating) ? "active" : ""}`} onClick={() => setRating(star)} onMouseEnter={() => setHoverRating(star)}>
+                      <StarIcon filled={star <= (hoverRating || rating)} size={26} />
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <textarea
-                className="textarea-field"
-                placeholder={`Escribe tu reseña, discos favoritos o conclusión sobre ${currentArtist.name}...`}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
+              {/* Comentario */}
+              <textarea className="textarea-field" placeholder={`Escribe tu reseña sobre ${currentArtist.name}...`} value={comment} onChange={(e) => setComment(e.target.value)} style={{ marginBottom: "1.25rem" }} />
 
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || rating === 0}
-                  className="btn"
-                  style={{
-                    backgroundColor: "var(--text-main)",
-                    color: "#09090b",
-                    fontWeight: 700,
-                    padding: "0.75rem 1.5rem"
-                  }}
-                >
-                  {isSubmitting ? "Guardando..." : "Publicar reseña"}
+              {/* Selector de Top 3 Canciones con Buscador */}
+              <div style={{ marginBottom: "1.25rem", borderTop: "1px solid var(--border)", paddingTop: "1.25rem" }}>
+                <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.4rem" }}>Tus 3 canciones favoritas</h3>
+                <div style={{ position: "relative", marginBottom: "0.75rem" }}>
+                  <input type="text" className="input-field" placeholder="Busca una canción en Spotify..." value={trackQuery} onChange={(e) => setTrackQuery(e.target.value)} style={{ width: "100%" }} />
+                  {trackResults.length > 0 && (
+                    <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", zIndex: 10, marginTop: "4px", maxHeight: "200px", overflowY: "auto" }}>
+                      {trackResults.map((t, idx) => (
+                        <div key={idx} onClick={() => addTrack(t)} style={{ padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }} onMouseOver={(e) => e.currentTarget.style.background = "var(--bg-elevated)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                          {t.image && <img src={t.image} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", objectFit: "cover" }} />}
+                          <div style={{ fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <strong>{t.name}</strong> <span style={{ color: "var(--text-muted)" }}>({t.artist})</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Lista de elegidas */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  {favoriteTracks.map((t, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--bg-main)", border: "1px solid var(--border)", padding: "0.35rem 0.75rem", borderRadius: "8px", fontSize: "0.85rem" }}>
+                      <span>{idx + 1}. {t.name}</span>
+                      <button type="button" onClick={() => removeTrack(idx)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontWeight: "bold" }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selector de Álbum Favorito */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.4rem" }}>Tu álbum favorito</h3>
+                {favoriteAlbum ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-main)", border: "1px solid var(--border)", padding: "0.5rem 0.75rem", borderRadius: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.85rem" }}>
+                      {favoriteAlbum.image && <img src={favoriteAlbum.image} alt="" style={{ width: "35px", height: "35px", borderRadius: "4px", objectFit: "cover" }} />}
+                      <strong>{favoriteAlbum.name}</strong>
+                    </div>
+                    <button type="button" onClick={() => setFavoriteAlbum(null)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "0.85rem" }}>Cambiar</button>
+                  </div>
+                ) : (
+                  <div style={{ position: "relative" }}>
+                    <input type="text" className="input-field" placeholder="Busca un álbum en Spotify..." value={albumQuery} onChange={(e) => setAlbumQuery(e.target.value)} style={{ width: "100%" }} />
+                    {albumResults.length > 0 && (
+                      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", zIndex: 10, marginTop: "4px", maxHeight: "200px", overflowY: "auto" }}>
+                        {albumResults.map((a, idx) => (
+                          <div key={idx} onClick={() => { setFavoriteAlbum(a); setAlbumQuery(""); setAlbumResults([]); }} style={{ padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }} onMouseOver={(e) => e.currentTarget.style.background = "var(--bg-elevated)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                            {a.image && <img src={a.image} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", objectFit: "cover" }} />}
+                            <div style={{ fontSize: "0.85rem" }}><strong>{a.name}</strong> <span style={{ color: "var(--text-muted)" }}>({a.artist})</span></div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button type="submit" disabled={isSubmitting || rating === 0} className="btn" style={{ backgroundColor: "var(--text-main)", color: "#09090b", fontWeight: 700, padding: "0.75rem 1.5rem" }}>
+                  {isSubmitting ? "Guardando..." : "Publicar reseña y selecciones"}
                 </button>
               </div>
             </form>
           </section>
 
-          {/* Feed de reseñas del grupo */}
+          {/* Feed con las selecciones visibles */}
           <section>
-            <h4 style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>
-              Reseñas de la comunidad ({artistReviews.length})
-            </h4>
-
-            {artistReviews.length === 0 ? (
-              <div className="card" style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>
-                Nadie ha publicado una reseña para {currentArtist.name} todavía. ¡Sé el primero!
-              </div>
-            ) : (
-              <div className="reviews-list">
-                {artistReviews.map((rev) => {
-                  const canDelete = isAdmin || rev.userId === user?.uid;
-                  return (
-                    <article key={rev.id} className="review-card">
-                      <div className="review-header">
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                          <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{rev.userName}</span>
-                          <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <StarIcon key={s} filled={s <= rev.rating} size={15} />
-                            ))}
-                          </div>
-                        </div>
-
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(rev.id)}
-                            className="delete-btn"
-                            title="Eliminar reseña"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <line x1="18" y1="6" x2="6" y2="18" />
-                              <line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
-                        )}
+            <h4 style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>Reseñas del grupo ({artistReviews.length})</h4>
+            <div className="reviews-list">
+              {artistReviews.map((rev) => (
+                <article key={rev.id} className="review-card">
+                  <div className="review-header">
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <span style={{ fontWeight: 600 }}>{rev.userName}</span>
+                      <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
+                        {[1, 2, 3, 4, 5].map((s) => <StarIcon key={s} filled={s <= rev.rating} size={15} />)}
                       </div>
+                    </div>
+                    {(isAdmin || rev.userId === user?.uid) && (
+                      <button type="button" onClick={() => handleDelete(rev.id)} className="delete-btn" title="Eliminar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      </button>
+                    )}
+                  </div>
 
-                      {rev.comment ? (
-                        <p style={{ color: "var(--text-main)", fontSize: "0.92rem", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                          {rev.comment}
-                        </p>
-                      ) : (
-                        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontStyle: "italic" }}>
-                          Calificó sin dejar comentario escrito.
-                        </p>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            )}
+                  {rev.comment && <p style={{ fontSize: "0.92rem", marginBottom: "1rem", lineHeight: 1.5 }}>{rev.comment}</p>}
+
+                  {/* Mostrar canciones y álbum elegidos */}
+                  {(rev.favoriteTracks?.length > 0 || rev.favoriteAlbum) && (
+                    <div style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: "10px", padding: "0.85rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.85rem" }}>
+                      <div>
+                        <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Top 3 Canciones</strong>
+                        {rev.favoriteTracks?.length ? rev.favoriteTracks.map((t, i) => <div key={i} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i + 1}. {t.name}</div>) : <span style={{ color: "var(--text-muted)" }}>Ninguna</span>}
+                      </div>
+                      <div>
+                        <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Álbum Favorito</strong>
+                        {rev.favoriteAlbum ? <div>{rev.favoriteAlbum.name}</div> : <span style={{ color: "var(--text-muted)" }}>Ninguno</span>}
+                      </div>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
           </section>
         </>
       )}
