@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { doc, onSnapshot, collection, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot, collection, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -18,16 +18,18 @@ export const Reviews = () => {
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
   
-  // Estados para el buscador de canciones y álbumes
-  const [favoriteTracks, setFavoriteTracks] = useState([]); // Máximo 3
+  const [favoriteTracks, setFavoriteTracks] = useState([]);
   const [trackQuery, setTrackQuery] = useState("");
   const [trackResults, setTrackResults] = useState([]);
 
-  const [favoriteAlbum, setFavoriteAlbum] = useState(null); // 1 álbum
+  const [favoriteAlbum, setFavoriteAlbum] = useState(null);
   const [albumQuery, setAlbumQuery] = useState("");
   const [albumResults, setAlbumResults] = useState([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [activeCommentReviewId, setActiveCommentReviewId] = useState(null);
+  const [replyText, setReplyText] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -60,12 +62,8 @@ export const Reviews = () => {
     }
   }, [currentArtist?.name, user, reviews.length]);
 
-  // Buscar canciones en tiempo real en la API
   useEffect(() => {
-    if (!trackQuery.trim() || trackQuery.length < 2) {
-      setTrackResults([]);
-      return;
-    }
+    if (!trackQuery.trim() || trackQuery.length < 2) { setTrackResults([]); return; }
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/spotify?searchTrack=${encodeURIComponent(trackQuery)}`);
@@ -76,12 +74,8 @@ export const Reviews = () => {
     return () => clearTimeout(timer);
   }, [trackQuery]);
 
-  // Buscar álbumes en tiempo real en la API
   useEffect(() => {
-    if (!albumQuery.trim() || albumQuery.length < 2) {
-      setAlbumResults([]);
-      return;
-    }
+    if (!albumQuery.trim() || albumQuery.length < 2) { setAlbumResults([]); return; }
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/spotify?searchAlbum=${encodeURIComponent(albumQuery)}`);
@@ -112,6 +106,7 @@ export const Reviews = () => {
     try {
       const safeArtistKey = currentArtist.name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
       const reviewId = `${safeArtistKey}_${user.uid}`;
+      const existingReview = reviews.find(r => r.id === reviewId);
 
       await setDoc(doc(db, "reviews", reviewId), {
         artistName: currentArtist.name,
@@ -121,6 +116,8 @@ export const Reviews = () => {
         comment: comment.trim(),
         favoriteTracks: favoriteTracks,
         favoriteAlbum: favoriteAlbum,
+        reactions: existingReview?.reactions || {},
+        comments: existingReview?.comments || [],
         updatedAt: new Date()
       });
     } catch (error) {
@@ -133,6 +130,54 @@ export const Reviews = () => {
   const handleDelete = async (reviewId) => {
     if (!window.confirm("¿Eliminar esta reseña?")) return;
     try { await deleteDoc(doc(db, "reviews", reviewId)); } catch (e) { console.error(e); }
+  };
+
+  const handleReaction = async (reviewId, emoji, currentReactions = {}) => {
+    if (!user) return;
+    const reviewRef = doc(db, "reviews", reviewId);
+    let updatedReactions = { ...currentReactions };
+    const userList = updatedReactions[emoji] || [];
+
+    if (userList.includes(user.uid)) {
+      updatedReactions[emoji] = userList.filter(uid => uid !== user.uid);
+      if (updatedReactions[emoji].length === 0) delete updatedReactions[emoji];
+    } else {
+      updatedReactions[emoji] = [...userList, user.uid];
+    }
+
+    try {
+      await updateDoc(reviewRef, { reactions: updatedReactions });
+    } catch (error) {
+      console.error("Error al actualizar reacción:", error);
+    }
+  };
+
+  const handleAddComment = async (reviewId, commentsList = []) => {
+    if (!replyText.trim() || !user) return;
+    const reviewRef = doc(db, "reviews", reviewId);
+    const newComment = {
+      id: Date.now().toString(),
+      userId: user.uid,
+      userName: user.displayName || "Usuario",
+      text: replyText.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await updateDoc(reviewRef, { comments: [...commentsList, newComment] });
+      setReplyText("");
+    } catch (error) {
+      console.error("Error al comentar:", error);
+    }
+  };
+
+  const handleDeleteComment = async (reviewId, commentsList, commentId) => {
+    const updated = commentsList.filter(c => c.id !== commentId);
+    try {
+      await updateDoc(doc(db, "reviews", reviewId), { comments: updated });
+    } catch (error) {
+      console.error("Error al borrar comentario:", error);
+    }
   };
 
   const isArtistValid = currentArtist && currentArtist.name;
@@ -162,7 +207,6 @@ export const Reviews = () => {
         <>
           <section className="card" style={{ marginBottom: "2rem" }}>
             <form onSubmit={handleSubmit}>
-              {/* Estrellas */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
                 <div>
                   <h3 style={{ fontSize: "1rem", fontWeight: 600 }}>Tu calificación</h3>
@@ -177,10 +221,8 @@ export const Reviews = () => {
                 </div>
               </div>
 
-              {/* Comentario */}
               <textarea className="textarea-field" placeholder={`Escribe tu reseña sobre ${currentArtist.name}...`} value={comment} onChange={(e) => setComment(e.target.value)} style={{ marginBottom: "1.25rem" }} />
 
-              {/* Selector de Top 3 Canciones con Buscador */}
               <div style={{ marginBottom: "1.25rem", borderTop: "1px solid var(--border)", paddingTop: "1.25rem" }}>
                 <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.4rem" }}>Tus 3 canciones favoritas</h3>
                 <div style={{ position: "relative", marginBottom: "0.75rem" }}>
@@ -198,7 +240,6 @@ export const Reviews = () => {
                     </div>
                   )}
                 </div>
-                {/* Lista de elegidas */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                   {favoriteTracks.map((t, idx) => (
                     <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--bg-main)", border: "1px solid var(--border)", padding: "0.35rem 0.75rem", borderRadius: "8px", fontSize: "0.85rem" }}>
@@ -209,7 +250,6 @@ export const Reviews = () => {
                 </div>
               </div>
 
-              {/* Selector de Álbum Favorito */}
               <div style={{ marginBottom: "1.5rem" }}>
                 <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.4rem" }}>Tu álbum favorito</h3>
                 {favoriteAlbum ? (
@@ -245,83 +285,165 @@ export const Reviews = () => {
             </form>
           </section>
 
-          {/* Feed con las selecciones visibles */}
           <section>
             <h4 style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>Reseñas del grupo ({artistReviews.length})</h4>
             <div className="reviews-list">
-              {artistReviews.map((rev) => (
-                <article key={rev.id} className="review-card">
-                  <div className="review-header">
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                      <span style={{ fontWeight: 600 }}>{rev.userName}</span>
-                      <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
-                        {[1, 2, 3, 4, 5].map((s) => <StarIcon key={s} filled={s <= rev.rating} size={15} />)}
+              {artistReviews.map((rev) => {
+                const reactions = rev.reactions || {};
+                const commentsList = rev.comments || [];
+                const isReplying = activeCommentReviewId === rev.id;
+
+                return (
+                  <article key={rev.id} className="review-card">
+                    <div className="review-header">
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <span style={{ fontWeight: 600 }}>{rev.userName}</span>
+                        <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
+                          {[1, 2, 3, 4, 5].map((s) => <StarIcon key={s} filled={s <= rev.rating} size={15} />)}
+                        </div>
                       </div>
+                      {(isAdmin || rev.userId === user?.uid) && (
+                        <button type="button" onClick={() => handleDelete(rev.id)} className="delete-btn" title="Eliminar">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        </button>
+                      )}
                     </div>
-                    {(isAdmin || rev.userId === user?.uid) && (
-                      <button type="button" onClick={() => handleDelete(rev.id)} className="delete-btn" title="Eliminar">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      </button>
-                    )}
-                  </div>
 
-                  {rev.comment && <p style={{ fontSize: "0.92rem", marginBottom: "1rem", lineHeight: 1.5 }}>{rev.comment}</p>}
+                    {rev.comment && <p style={{ fontSize: "0.92rem", marginBottom: "1rem", lineHeight: 1.5 }}>{rev.comment}</p>}
 
-                  {/* Mostrar canciones y álbum elegidos */}
-                  {/* Mostrar canciones y álbum elegidos con link e ícono de Spotify */}
-                  {(rev.favoriteTracks?.length > 0 || rev.favoriteAlbum) && (
-                    <div style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: "10px", padding: "0.85rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.85rem" }}>
-                      <div>
-                        <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Top 3 Canciones</strong>
-                        {rev.favoriteTracks?.length ? rev.favoriteTracks.map((t, i) => (
-                          <div key={i} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "0.2rem" }}>
-                            {t.url ? (
-                              <a 
-                                href={t.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                style={{ color: "var(--text-main)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-                                onMouseOver={(e) => e.currentTarget.style.color = "var(--accent-green)"}
-                                onMouseOut={(e) => e.currentTarget.style.color = "var(--text-main)"}
-                              >
-                                <span>{i + 1}. {t.name}</span>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, flexShrink: 0 }}>
-                                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                                </svg>
+                    {(rev.favoriteTracks?.length > 0 || rev.favoriteAlbum) && (
+                      <div style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: "10px", padding: "0.85rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.85rem", marginBottom: "1rem" }}>
+                        <div>
+                          <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Top 3 Canciones</strong>
+                          {rev.favoriteTracks?.length ? rev.favoriteTracks.map((t, i) => (
+                            <div key={i} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "0.2rem" }}>
+                              {t.url ? (
+                                <a href={t.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-main)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem" }} onMouseOver={(e) => e.currentTarget.style.color = "var(--accent-green)"} onMouseOut={(e) => e.currentTarget.style.color = "var(--text-main)"}>
+                                  <span>{i + 1}. {t.name}</span>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, flexShrink: 0 }}><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+                                </a>
+                              ) : <span>{i + 1}. {t.name}</span>}
+                            </div>
+                          )) : <span style={{ color: "var(--text-muted)" }}>Ninguna</span>}
+                        </div>
+                        <div>
+                          <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Álbum Favorito</strong>
+                          {rev.favoriteAlbum ? (
+                            rev.favoriteAlbum.url ? (
+                              <a href={rev.favoriteAlbum.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-main)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }} onMouseOver={(e) => e.currentTarget.style.color = "var(--accent-green)"} onMouseOut={(e) => e.currentTarget.style.color = "var(--text-main)"}>
+                                <span>{rev.favoriteAlbum.name}</span>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, flexShrink: 0 }}><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
                               </a>
-                            ) : (
-                              <span>{i + 1}. {t.name}</span>
-                            )}
-                          </div>
-                        )) : <span style={{ color: "var(--text-muted)" }}>Ninguna</span>}
+                            ) : <div>{rev.favoriteAlbum.name}</div>
+                          ) : <span style={{ color: "var(--text-muted)" }}>Ninguno</span>}
+                        </div>
                       </div>
-                      
-                      <div>
-                        <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Álbum Favorito</strong>
-                        {rev.favoriteAlbum ? (
-                          rev.favoriteAlbum.url ? (
-                            <a 
-                              href={rev.favoriteAlbum.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              style={{ color: "var(--text-main)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}
-                              onMouseOver={(e) => e.currentTarget.style.color = "var(--accent-green)"}
-                              onMouseOut={(e) => e.currentTarget.style.color = "var(--text-main)"}
+                    )}
+
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
+                        {Object.entries(reactions).map(([emoji, usersArray]) => {
+                          const hasReacted = usersArray.includes(user?.uid);
+                          return (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => handleReaction(rev.id, emoji, reactions)}
+                              style={{
+                                background: hasReacted ? "var(--bg-elevated)" : "var(--bg-main)",
+                                border: `1px solid ${hasReacted ? "var(--accent-blue)" : "var(--border)"}`,
+                                borderRadius: "20px",
+                                padding: "0.2rem 0.6rem",
+                                fontSize: "0.82rem",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.3rem",
+                                color: "var(--text-main)"
+                              }}
                             >
-                              <span>{rev.favoriteAlbum.name}</span>
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, flexShrink: 0 }}>
-                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                              </svg>
-                            </a>
-                          ) : (
-                            <div>{rev.favoriteAlbum.name}</div>
-                          )
-                        ) : <span style={{ color: "var(--text-muted)" }}>Ninguno</span>}
+                              <span>{emoji}</span>
+                              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>{usersArray.length}</span>
+                            </button>
+                          );
+                        })}
+
+                        <div style={{ position: "relative", display: "inline-block" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const customEmoji = prompt("Escribe o pega tu emoji (puedes usar el menú de Win + . o Cmd + Ctrl + Espacio):");
+                              if (customEmoji && customEmoji.trim()) {
+                                handleReaction(rev.id, customEmoji.trim(), reactions);
+                              }
+                            }}
+                            title="Agregar otro emoji"
+                            style={{
+                              background: "var(--bg-main)",
+                              border: "1px dashed var(--border)",
+                              borderRadius: "20px",
+                              padding: "0.2rem 0.65rem",
+                              fontSize: "0.8rem",
+                              cursor: "pointer",
+                              color: "var(--text-muted)"
+                            }}
+                          >
+                            + 😊
+                          </button>
+                        </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveCommentReviewId(isReplying ? null : rev.id)}
+                        style={{ background: "none", border: "none", color: "var(--accent-blue)", fontSize: "0.85rem", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        {commentsList.length > 0 ? `Comentarios (${commentsList.length})` : "Comentar"}
+                      </button>
                     </div>
-                  )}
-                </article>
-              ))}
+
+                    {isReplying && (
+                      <div style={{ marginTop: "1rem", borderTop: "1px dashed var(--border)", paddingTop: "1rem" }}>
+                        {commentsList.length > 0 && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1rem" }}>
+                            {commentsList.map((c) => (
+                              <div key={c.id} style={{ background: "var(--bg-main)", padding: "0.6rem 0.85rem", borderRadius: "8px", fontSize: "0.85rem", position: "relative" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
+                                  <strong style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{c.userName}</strong>
+                                  {(isAdmin || c.userId === user?.uid) && (
+                                    <button type="button" onClick={() => handleDeleteComment(rev.id, commentsList, c.id)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "0.75rem" }}>Eliminar</button>
+                                  )}
+                                </div>
+                                <p style={{ margin: 0, color: "var(--text-main)" }}>{c.text}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <input
+                            type="text"
+                            className="input-field"
+                            placeholder="Escribe una respuesta..."
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            style={{ flex: 1, fontSize: "0.85rem", padding: "0.5rem 0.75rem" }}
+                            onKeyDown={(e) => { if (e.key === "Enter") handleAddComment(rev.id, commentsList); }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddComment(rev.id, commentsList)}
+                            className="btn"
+                            style={{ backgroundColor: "var(--accent-blue)", color: "#fff", padding: "0.5rem 1rem", fontSize: "0.85rem" }}
+                          >
+                            Enviar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           </section>
         </>
