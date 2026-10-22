@@ -50,33 +50,40 @@ export const Roulette = () => {
   // NUEVA LÓGICA DE CORONACIÓN CON API DE SPOTIFY
   const setArtistOfTheWeek = async () => {
     if (!winner) return;
-    setIsCrowning(true); // Desactiva el botón mientras carga
+    setIsCrowning(true);
 
     try {
       let spotifyUrl = "";
-      let spotifyImage = "";
+      let spotifyImage = null;
+      const cleanName = winner.name.trim();
 
-      // Llamamos a nuestra propia API en Vercel
       try {
-        const res = await fetch(`/api/spotify?artist=${encodeURIComponent(winner.name)}`);
-        const data = await res.json();
-        if (res.ok && data.url) {
-          spotifyUrl = data.url;
-          spotifyImage = data.image;
+        const res = await fetch(`/api/spotify?artist=${encodeURIComponent(cleanName)}`);
+        const text = await res.text(); // Leemos como texto primero por seguridad
+        
+        try {
+          const data = JSON.parse(text);
+          if (res.ok && data.url) {
+            spotifyUrl = data.url;
+            spotifyImage = data.image || null;
+          } else {
+            console.warn("Spotify API no devolvió URL:", data);
+          }
+        } catch (jsonErr) {
+          console.error("Vercel devolvió HTML en vez de JSON:", text.substring(0, 100));
         }
       } catch (err) {
-        console.error("Error contactando a la API de Spotify", err);
+        console.error("Error de red contactando a la API de Spotify:", err);
       }
 
-      // Guardamos en Firebase, usando un link de búsqueda como Plan B si falla
       await setDoc(doc(db, "globals", "general"), {
-        name: winner.name,
+        name: cleanName,
         category: winner.category,
-        spotifyUrl: spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(winner.name)}/artists`,
-        spotifyImage: spotifyImage || null
+        spotifyUrl: spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(cleanName)}/artists`,
+        spotifyImage: spotifyImage
       });
 
-      alert(`🎉 ¡${winner.name} coronado con éxito! Ve al Dashboard para revisarlo.`);
+      alert(`🎉 ¡${cleanName} coronado con éxito! ${spotifyUrl ? "✅ (Con datos de Spotify)" : "⚠️ (Usando link de búsqueda)"}`);
       resetRoulette();
     } catch (error) {
       console.error("Error al coronar al artista:", error);
