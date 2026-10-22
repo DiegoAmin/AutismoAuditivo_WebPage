@@ -11,28 +11,16 @@ export const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-
-    // Escuchar al artista de la semana
     const unsubArtist = onSnapshot(doc(db, "globals", "general"), (docSnap) => {
-      if (docSnap.exists()) {
-        setCurrentArtist(docSnap.data());
-      }
+      if (docSnap.exists()) setCurrentArtist(docSnap.data());
     });
 
-    // Escuchar el progreso y filtrar solo los de esta semana
     const unsubProgress = onSnapshot(collection(db, "progress"), (snapshot) => {
       const progressData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      // Filtrar para que solo se muestre el progreso del artista en curso
       const currentWeekProgress = progressData.filter(p => p.artistName === currentArtist?.name);
       setGroupProgress(currentWeekProgress);
-      
       const myProgress = currentWeekProgress.find(p => p.id === user.uid);
-      if (myProgress) {
-        setUserProgress(myProgress.status);
-      } else {
-        setUserProgress("por_escuchar");
-      }
+      setUserProgress(myProgress ? myProgress.status : "por_escuchar");
     });
 
     return () => { unsubArtist(); unsubProgress(); };
@@ -48,16 +36,13 @@ export const Dashboard = () => {
         updatedAt: new Date()
       });
       setUserProgress(status);
-    } catch (error) {
-      console.error("Error al actualizar progreso:", error);
-    }
+    } catch (error) { console.error("Error:", error); }
   };
 
   const isArtistValid = currentArtist && currentArtist.name;
 
   return (
     <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
-      
       <h2 style={{ color: "#aaa" }}>Bienvenido, {user?.displayName}</h2>
       <h1 style={{ fontSize: "2.5rem", margin: "30px 0 10px 0" }}>Artista de la Semana 🏆</h1>
       
@@ -68,22 +53,26 @@ export const Dashboard = () => {
       ) : (
         <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "15px", padding: "40px", marginTop: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
           
-          <span style={{ 
-            background: currentArtist.category === "ogs" ? "#ffcc00" : "#2196F3", 
-            color: currentArtist.category === "ogs" ? "black" : "white", 
-            padding: "5px 15px", 
-            borderRadius: "20px", 
-            fontWeight: "bold", 
-            textTransform: "uppercase",
-            fontSize: "0.9rem"
-          }}>
-            {currentArtist.category}
-          </span>
+          <div style={{ marginBottom: "20px" }}>
+            <span style={{ background: currentArtist.category === "ogs" ? "#ffcc00" : "#2196F3", color: currentArtist.category === "ogs" ? "black" : "white", padding: "5px 15px", borderRadius: "20px", fontWeight: "bold", textTransform: "uppercase", fontSize: "0.9rem" }}>
+              {currentArtist.category}
+            </span>
+          </div>
+
+          {/* AQUÍ ESTÁ LA MAGIA DE LA FOTO */}
+          {currentArtist.spotifyImage && (
+            <img 
+              src={currentArtist.spotifyImage} 
+              alt={currentArtist.name} 
+              style={{ width: "200px", height: "200px", objectFit: "cover", borderRadius: "50%", boxShadow: "0 10px 25px rgba(0,0,0,0.8)", marginBottom: "20px" }}
+            />
+          )}
           
-          <h2 style={{ fontSize: "4rem", margin: "20px 0" }}>{currentArtist.name}</h2>
+          <h2 style={{ fontSize: "4rem", margin: "0 0 30px 0" }}>{currentArtist.name}</h2>
           
+          {/* AQUÍ ESTÁ EL LINK DINÁMICO */}
           <a 
-            href={`https://open.spotify.com/search/${encodeURIComponent(currentArtist.name)}/artists`} 
+            href={currentArtist.spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(currentArtist.name)}/artists`} 
             target="_blank" 
             rel="noopener noreferrer"
             style={{ display: "inline-block", background: "#1DB954", color: "white", padding: "12px 30px", borderRadius: "30px", textDecoration: "none", fontWeight: "bold", fontSize: "1.2rem", transition: "transform 0.2s" }}
@@ -98,7 +87,6 @@ export const Dashboard = () => {
       {isArtistValid && (
         <div style={{ marginTop: "50px", background: "#222", padding: "30px", borderRadius: "15px" }}>
           <h3>¿Cómo vas esta semana?</h3>
-          
           <div style={{ display: "flex", justifyContent: "center", gap: "15px", marginTop: "20px", flexWrap: "wrap" }}>
             <button onClick={() => handleUpdateProgress("por_escuchar")} style={{ padding: "10px 20px", borderRadius: "5px", border: "none", cursor: "pointer", fontWeight: "bold", background: userProgress === "por_escuchar" ? "#f44336" : "#444", color: "white" }}>🥱 Por escuchar</button>
             <button onClick={() => handleUpdateProgress("escuchando")} style={{ padding: "10px 20px", borderRadius: "5px", border: "none", cursor: "pointer", fontWeight: "bold", background: userProgress === "escuchando" ? "#ffcc00" : "#444", color: userProgress === "escuchando" ? "black" : "white" }}>🎧 Escuchando</button>
@@ -114,11 +102,7 @@ export const Dashboard = () => {
                 {groupProgress.map(friend => (
                   <li key={friend.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#222", padding: "10px 15px", borderRadius: "5px" }}>
                     <span>{friend.displayName}</span>
-                    <span style={{ 
-                      fontSize: "0.85rem", padding: "4px 10px", borderRadius: "12px", fontWeight: "bold",
-                      background: friend.status === "terminado" ? "#4CAF50" : friend.status === "escuchando" ? "#ffcc00" : "#f44336",
-                      color: friend.status === "escuchando" ? "black" : "white"
-                    }}>
+                    <span style={{ fontSize: "0.85rem", padding: "4px 10px", borderRadius: "12px", fontWeight: "bold", background: friend.status === "terminado" ? "#4CAF50" : friend.status === "escuchando" ? "#ffcc00" : "#f44336", color: friend.status === "escuchando" ? "black" : "white" }}>
                       {friend.status === "terminado" ? "Terminado" : friend.status === "escuchando" ? "Escuchando" : "Por escuchar"}
                     </span>
                   </li>
@@ -128,7 +112,6 @@ export const Dashboard = () => {
           </div>
         </div>
       )}
-      
     </div>
   );
 };
