@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { collection, onSnapshot, setDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/config.js";
+import { useAuth } from "../context/AuthContext.jsx"; // <-- IMPORTAMOS AUTH
 
 export const Roulette = () => {
+  const { isAdmin } = useAuth(); // <-- SACAMOS EL ROL
+
   const [artists, setArtists] = useState([]);
   const [category, setCategory] = useState("actuales");
   const [listType, setListType] = useState("official");
@@ -25,6 +28,7 @@ export const Roulette = () => {
   const rouletteCandidates = artists.filter(a => a.category === category && a.status === listType);
 
   const spin = () => {
+    if (!isAdmin) return; // Seguridad extra
     if (rouletteCandidates.length === 0) {
       setStatusMessage("No hay artistas registrados en esta combinación.");
       return;
@@ -53,7 +57,7 @@ export const Roulette = () => {
   };
 
   const setArtistOfTheWeek = async () => {
-    if (!winner) return;
+    if (!winner || !isAdmin) return;
     setIsCrowning(true);
     setStatusMessage(null);
 
@@ -95,7 +99,7 @@ export const Roulette = () => {
   };
 
   const promoteToOfficial = async () => {
-    if (!winner) return;
+    if (!winner || !isAdmin) return;
     try {
       await updateDoc(doc(db, "artists", winner.id), { status: "official" });
       const promotedName = winner.name;
@@ -128,34 +132,20 @@ export const Roulette = () => {
         <h1 className="page-title">Ruleta de Artistas</h1>
       </div>
 
+      {!isAdmin && (
+        <div style={{ padding: "1rem", backgroundColor: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "10px", color: "var(--accent-amber)", marginBottom: "1.5rem", fontSize: "0.9rem", fontWeight: 600 }}>
+          🔒 Modo observador: Solo los administradores pueden girar la ruleta.
+        </div>
+      )}
+
       <div className="control-grid">
         <div>
           <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.4rem", fontWeight: 600 }}>
             ÉPOCA
           </label>
           <div className="segmented-control">
-            <button
-              onClick={() => handleConfigChange("category", "ogs")}
-              disabled={isSpinning}
-              className="segmented-btn"
-              style={{
-                backgroundColor: category === "ogs" ? "var(--accent-amber)" : "transparent",
-                color: category === "ogs" ? "#000" : "var(--text-muted)"
-              }}
-            >
-              OG's
-            </button>
-            <button
-              onClick={() => handleConfigChange("category", "actuales")}
-              disabled={isSpinning}
-              className="segmented-btn"
-              style={{
-                backgroundColor: category === "actuales" ? "var(--accent-blue)" : "transparent",
-                color: category === "actuales" ? "#fff" : "var(--text-muted)"
-              }}
-            >
-              Actuales
-            </button>
+            <button onClick={() => handleConfigChange("category", "ogs")} disabled={isSpinning} className="segmented-btn" style={{ backgroundColor: category === "ogs" ? "var(--accent-amber)" : "transparent", color: category === "ogs" ? "#000" : "var(--text-muted)" }}>OG's</button>
+            <button onClick={() => handleConfigChange("category", "actuales")} disabled={isSpinning} className="segmented-btn" style={{ backgroundColor: category === "actuales" ? "var(--accent-blue)" : "transparent", color: category === "actuales" ? "#fff" : "var(--text-muted)" }}>Actuales</button>
           </div>
         </div>
 
@@ -164,42 +154,14 @@ export const Roulette = () => {
             ORIGEN DE LISTA
           </label>
           <div className="segmented-control">
-            <button
-              onClick={() => handleConfigChange("listType", "official")}
-              disabled={isSpinning}
-              className="segmented-btn"
-              style={{
-                backgroundColor: listType === "official" ? "var(--bg-elevated)" : "transparent",
-                color: listType === "official" ? "var(--text-main)" : "var(--text-muted)"
-              }}
-            >
-              Oficial
-            </button>
-            <button
-              onClick={() => handleConfigChange("listType", "suggestion")}
-              disabled={isSpinning}
-              className="segmented-btn"
-              style={{
-                backgroundColor: listType === "suggestion" ? "var(--bg-elevated)" : "transparent",
-                color: listType === "suggestion" ? "var(--text-main)" : "var(--text-muted)"
-              }}
-            >
-              Sugerencias
-            </button>
+            <button onClick={() => handleConfigChange("listType", "official")} disabled={isSpinning} className="segmented-btn" style={{ backgroundColor: listType === "official" ? "var(--bg-elevated)" : "transparent", color: listType === "official" ? "var(--text-main)" : "var(--text-muted)" }}>Oficial</button>
+            <button onClick={() => handleConfigChange("listType", "suggestion")} disabled={isSpinning} className="segmented-btn" style={{ backgroundColor: listType === "suggestion" ? "var(--bg-elevated)" : "transparent", color: listType === "suggestion" ? "var(--text-main)" : "var(--text-muted)" }}>Sugerencias</button>
           </div>
         </div>
       </div>
 
       {statusMessage && (
-        <div style={{
-          padding: "0.85rem 1rem",
-          marginBottom: "1.25rem",
-          borderRadius: "10px",
-          backgroundColor: "rgba(59, 130, 246, 0.12)",
-          border: "1px solid rgba(59, 130, 246, 0.3)",
-          color: "#93c5fd",
-          fontSize: "0.9rem"
-        }}>
+        <div style={{ padding: "0.85rem 1rem", marginBottom: "1.25rem", borderRadius: "10px", backgroundColor: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.3)", color: "#93c5fd", fontSize: "0.9rem" }}>
           {statusMessage}
         </div>
       )}
@@ -210,18 +172,7 @@ export const Roulette = () => {
           <span>Intento {spinCount} de 3</span>
         </div>
 
-        <div style={{
-          background: "var(--bg-main)",
-          border: `1px solid ${winner ? "var(--accent-green)" : "var(--border)"}`,
-          borderRadius: "12px",
-          padding: "3.5rem 1.25rem",
-          marginBottom: "1.5rem",
-          minHeight: "180px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center"
-        }}>
+        <div style={{ background: "var(--bg-main)", border: `1px solid ${winner ? "var(--accent-green)" : "var(--border)"}`, borderRadius: "12px", padding: "3.5rem 1.25rem", marginBottom: "1.5rem", minHeight: "180px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
           <h2 className="artist-hero-name" style={{ margin: 0, color: winner ? "var(--accent-green)" : "var(--text-main)" }}>
             {displayedName}
           </h2>
@@ -235,63 +186,31 @@ export const Roulette = () => {
         {spinCount < 3 && (
           <button
             onClick={spin}
-            disabled={isSpinning}
+            disabled={isSpinning || !isAdmin} // <-- BLOQUEADO SI NO ES ADMIN
             className="btn"
-            style={{
-              width: "100%",
-              maxWidth: "360px",
-              padding: "1rem 1.5rem",
-              fontSize: "1rem",
-              backgroundColor: spinCount === 2 ? "var(--accent-red)" : "var(--accent-blue)",
-              color: "#fff"
-            }}
+            style={{ width: "100%", maxWidth: "360px", padding: "1rem 1.5rem", fontSize: "1rem", backgroundColor: spinCount === 2 ? "var(--accent-red)" : "var(--accent-blue)", color: "#fff", opacity: !isAdmin ? 0.5 : 1, cursor: !isAdmin ? "not-allowed" : "pointer" }}
           >
             {isSpinning ? "Seleccionando..." : spinCount === 0 ? "Iniciar primer tiro (1/3)" : spinCount === 1 ? "Girar segundo tiro (2/3)" : "Ejecutar tiro definitivo (3/3)"}
           </button>
         )}
 
-        {winner && !isSpinning && (
+        {winner && !isSpinning && isAdmin && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", maxWidth: "400px", margin: "0 auto" }}>
             <p style={{ color: "var(--accent-green)", fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Seleccionado definitivo
             </p>
 
             {listType === "suggestion" && (
-              <button
-                onClick={promoteToOfficial}
-                className="btn"
-                style={{ width: "100%", backgroundColor: "var(--accent-purple)", color: "#fff" }}
-              >
+              <button onClick={promoteToOfficial} className="btn" style={{ width: "100%", backgroundColor: "var(--accent-purple)", color: "#fff" }}>
                 Mover a Lista Oficial
               </button>
             )}
 
-            <button
-              onClick={setArtistOfTheWeek}
-              disabled={isCrowning}
-              className="btn"
-              style={{
-                width: "100%",
-                backgroundColor: "var(--accent-amber)",
-                color: "#000",
-                fontWeight: 700
-              }}
-            >
+            <button onClick={setArtistOfTheWeek} disabled={isCrowning} className="btn" style={{ width: "100%", backgroundColor: "var(--accent-amber)", color: "#000", fontWeight: 700 }}>
               {isCrowning ? "Sincronizando con Spotify..." : "Asignar como Artista de la Semana"}
             </button>
 
-            <button
-              onClick={resetRoulette}
-              style={{
-                marginTop: "0.5rem",
-                background: "none",
-                border: "none",
-                color: "var(--text-muted)",
-                cursor: "pointer",
-                fontSize: "0.85rem",
-                textDecoration: "underline"
-              }}
-            >
+            <button onClick={resetRoulette} style={{ marginTop: "0.5rem", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.85rem", textDecoration: "underline" }}>
               Reiniciar ruleta
             </button>
           </div>
