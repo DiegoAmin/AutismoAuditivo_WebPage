@@ -46,10 +46,13 @@ export const Lists = () => {
   };
 
   const currentArtists = artists.filter(a => a.category === activeTab);
+  
+  // Ordenamiento alfabético limpio usando localeCompare
   const sortByAlphabet = (a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
-  const oficialList = currentArtists.filter(a => a.status === "official");
-  const sugerenciaList = currentArtists.filter(a => a.status === "suggestion");
-  const pasaronList = currentArtists.filter(a => a.status === "history");
+
+  const oficialList = currentArtists.filter(a => a.status === "official").sort(sortByAlphabet);
+  const sugerenciaList = currentArtists.filter(a => a.status === "suggestion").sort(sortByAlphabet);
+  const pasaronList = currentArtists.filter(a => a.status === "history").sort(sortByAlphabet);
 
   const columns = [
     { title: "Lista Oficial", items: oficialList, color: "var(--accent-blue)", muted: false },
