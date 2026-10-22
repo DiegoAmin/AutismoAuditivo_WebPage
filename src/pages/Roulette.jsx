@@ -4,18 +4,19 @@ import { db } from "../firebase/config.js";
 
 export const Roulette = () => {
   const [artists, setArtists] = useState([]);
-  const [category, setCategory] = useState("actuales"); 
-  const [listType, setListType] = useState("official"); 
-  
+  const [category, setCategory] = useState("actuales");
+  const [listType, setListType] = useState("official");
+
   const [isSpinning, setIsSpinning] = useState(false);
-  const [displayedName, setDisplayedName] = useState("?");
+  const [displayedName, setDisplayedName] = useState("—");
   const [winner, setWinner] = useState(null);
   const [spinCount, setSpinCount] = useState(0);
-  const [isCrowning, setIsCrowning] = useState(false); // Estado de carga
+  const [isCrowning, setIsCrowning] = useState(false);
+  const [statusMessage, setStatusMessage] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "artists"), (snapshot) => {
-      const artistData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const artistData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setArtists(artistData);
     });
     return () => unsubscribe();
@@ -24,11 +25,15 @@ export const Roulette = () => {
   const rouletteCandidates = artists.filter(a => a.category === category && a.status === listType);
 
   const spin = () => {
-    if (rouletteCandidates.length === 0) return alert(`No hay artistas disponibles en esta lista.`);
+    if (rouletteCandidates.length === 0) {
+      setStatusMessage("No hay artistas registrados en esta combinación.");
+      return;
+    }
+    setStatusMessage(null);
     setIsSpinning(true);
     setWinner(null);
     let ticks = 0;
-    
+
     const interval = setInterval(() => {
       const randomIdx = Math.floor(Math.random() * rouletteCandidates.length);
       setDisplayedName(rouletteCandidates[randomIdx].name);
@@ -44,13 +49,13 @@ export const Roulette = () => {
         });
         setIsSpinning(false);
       }
-    }, 75); 
+    }, 75);
   };
 
-  // NUEVA LÓGICA DE CORONACIÓN CON API DE SPOTIFY
   const setArtistOfTheWeek = async () => {
     if (!winner) return;
     setIsCrowning(true);
+    setStatusMessage(null);
 
     try {
       let spotifyUrl = "";
@@ -59,21 +64,18 @@ export const Roulette = () => {
 
       try {
         const res = await fetch(`/api/spotify?artist=${encodeURIComponent(cleanName)}`);
-        const text = await res.text(); // Leemos como texto primero por seguridad
-        
+        const text = await res.text();
         try {
           const data = JSON.parse(text);
           if (res.ok && data.url) {
             spotifyUrl = data.url;
             spotifyImage = data.image || null;
-          } else {
-            console.warn("Spotify API no devolvió URL:", data);
           }
         } catch (jsonErr) {
-          console.error("Vercel devolvió HTML en vez de JSON:", text.substring(0, 100));
+          console.error("Respuesta no válida de API:", text.substring(0, 100));
         }
       } catch (err) {
-        console.error("Error de red contactando a la API de Spotify:", err);
+        console.error("Error de red contactando Spotify API:", err);
       }
 
       await setDoc(doc(db, "globals", "general"), {
@@ -83,8 +85,8 @@ export const Roulette = () => {
         spotifyImage: spotifyImage
       });
 
-      alert(`🎉 ¡${cleanName} coronado con éxito! ${spotifyUrl ? "✅ (Con datos de Spotify)" : "⚠️ (Usando link de búsqueda)"}`);
       resetRoulette();
+      setStatusMessage(`${cleanName} fue asignado como Artista de la Semana.`);
     } catch (error) {
       console.error("Error al coronar al artista:", error);
     } finally {
@@ -96,76 +98,205 @@ export const Roulette = () => {
     if (!winner) return;
     try {
       await updateDoc(doc(db, "artists", winner.id), { status: "official" });
-      alert(`🚀 ¡${winner.name} ha sido ascendido a la Lista Oficial!`);
+      const promotedName = winner.name;
       resetRoulette();
-    } catch (error) { console.error("Error:", error); }
+      setStatusMessage(`${promotedName} fue movido a la Lista Oficial.`);
+    } catch (error) {
+      console.error("Error:", error);
+    }
   };
 
   const handleConfigChange = (type, value) => {
     if (type === "category") setCategory(value);
     if (type === "listType") setListType(value);
-    resetRoulette(); 
+    resetRoulette();
   };
 
   const resetRoulette = () => {
     setSpinCount(0);
     setWinner(null);
-    setDisplayedName("?");
+    setDisplayedName("—");
+    setStatusMessage(null);
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
-      <h1 style={{ fontSize: "2.5rem", marginBottom: "15px" }}>La Ruleta del Autismo 🎡</h1>
-
-      <div style={{ background: "#222", padding: "20px", borderRadius: "15px", marginBottom: "30px", display: "flex", flexDirection: "column", gap: "15px" }}>
-        <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
-          <span style={{ color: "#aaa", alignSelf: "center", marginRight: "10px", fontWeight: "bold" }}>Época:</span>
-          <button onClick={() => handleConfigChange("category", "ogs")} disabled={isSpinning} style={{ padding: "8px 25px", fontSize: "1rem", fontWeight: "bold", border: "none", borderRadius: "8px", cursor: isSpinning ? "not-allowed" : "pointer", backgroundColor: category === "ogs" ? "#ffcc00" : "#444", color: category === "ogs" ? "black" : "white", opacity: isSpinning ? 0.5 : 1 }}>OG's</button>
-          <button onClick={() => handleConfigChange("category", "actuales")} disabled={isSpinning} style={{ padding: "8px 25px", fontSize: "1rem", fontWeight: "bold", border: "none", borderRadius: "8px", cursor: isSpinning ? "not-allowed" : "pointer", backgroundColor: category === "actuales" ? "#2196F3" : "#444", color: "white", opacity: isSpinning ? 0.5 : 1 }}>Actuales</button>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
-          <span style={{ color: "#aaa", alignSelf: "center", marginRight: "10px", fontWeight: "bold" }}>Tipo:</span>
-          <button onClick={() => handleConfigChange("listType", "official")} disabled={isSpinning} style={{ padding: "8px 25px", fontSize: "1rem", fontWeight: "bold", border: "none", borderRadius: "8px", cursor: isSpinning ? "not-allowed" : "pointer", backgroundColor: listType === "official" ? "#4CAF50" : "#444", color: "white", opacity: isSpinning ? 0.5 : 1 }}>Lista Oficial</button>
-          <button onClick={() => handleConfigChange("listType", "suggestion")} disabled={isSpinning} style={{ padding: "8px 25px", fontSize: "1rem", fontWeight: "bold", border: "none", borderRadius: "8px", cursor: isSpinning ? "not-allowed" : "pointer", backgroundColor: listType === "suggestion" ? "#9c27b0" : "#444", color: "white", opacity: isSpinning ? 0.5 : 1 }}>Sugerencias</button>
-        </div>
+    <main className="page-container">
+      <div style={{ marginBottom: "1.75rem" }}>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
+          Selección aleatoria
+        </p>
+        <h1 className="page-title">Ruleta de Artistas</h1>
       </div>
 
-      <p style={{ color: "#888", marginBottom: "20px" }}>Participan {rouletteCandidates.length} artistas en esta ruleta.</p>
-
-      <div style={{ height: "30px", marginBottom: "10px", color: "#aaa", fontSize: "1.2rem", fontStyle: "italic" }}>
-        {spinCount === 1 && !isSpinning && `¡Uf! ${displayedName} se salvó esta vez...`}
-        {spinCount === 2 && !isSpinning && `¡${displayedName} a punto de caer! Se viene el tiro final...`}
-      </div>
-
-      <div style={{ background: "#1a1a1a", border: `2px solid ${category === "ogs" ? "#ffcc00" : "#2196F3"}`, borderRadius: "20px", padding: "60px 20px", marginBottom: "30px", minHeight: "200px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
-        <h2 style={{ fontSize: displayedName === "?" ? "6rem" : "4rem", margin: 0, color: winner ? "#4CAF50" : "#fff", transition: "color 0.3s ease", wordBreak: "break-word" }}>{displayedName}</h2>
-      </div>
-
-      {spinCount < 3 && (
-        <button onClick={spin} disabled={isSpinning} style={{ padding: "15px 50px", fontSize: "1.5rem", fontWeight: "bold", background: isSpinning ? "#555" : (spinCount === 2 ? "#f44336" : "#2196F3"), color: "white", border: "none", borderRadius: "30px", cursor: isSpinning ? "not-allowed" : "pointer" }}>
-          {isSpinning ? "Girando..." : spinCount === 0 ? "🎲 PRIMER TIRO (1/3)" : spinCount === 1 ? "🎲 SEGUNDO TIRO (2/3)" : "🔥 TIRO FINAL (3/3) 🔥"}
-        </button>
-      )}
-
-      {winner && !isSpinning && (
-        <div style={{ animation: "fadeIn 0.5s ease", display: "flex", flexDirection: "column", alignItems: "center", gap: "15px" }}>
-          <h3 style={{ color: "#4CAF50", fontSize: "1.8rem", margin: "0 0 10px 0" }}>¡EL GANADOR DEFINITIVO!</h3>
-          
-          {listType === "suggestion" && (
-            <button onClick={promoteToOfficial} style={{ width: "100%", maxWidth: "400px", padding: "15px 20px", fontSize: "1.1rem", fontWeight: "bold", background: "#9c27b0", color: "white", border: "none", borderRadius: "10px", cursor: "pointer" }}>
-              ⬆️ Ascender a Lista Oficial
+      <div className="control-grid">
+        <div>
+          <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.4rem", fontWeight: 600 }}>
+            ÉPOCA
+          </label>
+          <div className="segmented-control">
+            <button
+              onClick={() => handleConfigChange("category", "ogs")}
+              disabled={isSpinning}
+              className="segmented-btn"
+              style={{
+                backgroundColor: category === "ogs" ? "var(--accent-amber)" : "transparent",
+                color: category === "ogs" ? "#000" : "var(--text-muted)"
+              }}
+            >
+              OG's
             </button>
-          )}
+            <button
+              onClick={() => handleConfigChange("category", "actuales")}
+              disabled={isSpinning}
+              className="segmented-btn"
+              style={{
+                backgroundColor: category === "actuales" ? "var(--accent-blue)" : "transparent",
+                color: category === "actuales" ? "#fff" : "var(--text-muted)"
+              }}
+            >
+              Actuales
+            </button>
+          </div>
+        </div>
 
-          <button onClick={setArtistOfTheWeek} disabled={isCrowning} style={{ width: "100%", maxWidth: "400px", padding: "15px 20px", fontSize: "1.1rem", fontWeight: "bold", background: isCrowning ? "#888" : "#ffcc00", color: "black", border: "none", borderRadius: "10px", cursor: isCrowning ? "not-allowed" : "pointer" }}>
-            {isCrowning ? "⏳ Conectando con Spotify..." : "🏆 Coronar como Artista de la Semana"}
-          </button>
-          
-          <button onClick={resetRoulette} style={{ marginTop: "10px", background: "none", border: "none", color: "#aaa", textDecoration: "underline", cursor: "pointer", fontSize: "1rem" }}>
-            Abortar misión y volver a empezar
-          </button>
+        <div>
+          <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.4rem", fontWeight: 600 }}>
+            ORIGEN DE LISTA
+          </label>
+          <div className="segmented-control">
+            <button
+              onClick={() => handleConfigChange("listType", "official")}
+              disabled={isSpinning}
+              className="segmented-btn"
+              style={{
+                backgroundColor: listType === "official" ? "var(--bg-elevated)" : "transparent",
+                color: listType === "official" ? "var(--text-main)" : "var(--text-muted)"
+              }}
+            >
+              Oficial
+            </button>
+            <button
+              onClick={() => handleConfigChange("listType", "suggestion")}
+              disabled={isSpinning}
+              className="segmented-btn"
+              style={{
+                backgroundColor: listType === "suggestion" ? "var(--bg-elevated)" : "transparent",
+                color: listType === "suggestion" ? "var(--text-main)" : "var(--text-muted)"
+              }}
+            >
+              Sugerencias
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {statusMessage && (
+        <div style={{
+          padding: "0.85rem 1rem",
+          marginBottom: "1.25rem",
+          borderRadius: "10px",
+          backgroundColor: "rgba(59, 130, 246, 0.12)",
+          border: "1px solid rgba(59, 130, 246, 0.3)",
+          color: "#93c5fd",
+          fontSize: "0.9rem"
+        }}>
+          {statusMessage}
         </div>
       )}
-    </div>
+
+      <section className="card" style={{ textAlign: "center" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+          <span>{rouletteCandidates.length} artistas disponibles</span>
+          <span>Intento {spinCount} de 3</span>
+        </div>
+
+        <div style={{
+          background: "var(--bg-main)",
+          border: `1px solid ${winner ? "var(--accent-green)" : "var(--border)"}`,
+          borderRadius: "12px",
+          padding: "3.5rem 1.25rem",
+          marginBottom: "1.5rem",
+          minHeight: "180px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center"
+        }}>
+          <h2 className="artist-hero-name" style={{ margin: 0, color: winner ? "var(--accent-green)" : "var(--text-main)" }}>
+            {displayedName}
+          </h2>
+          {spinCount > 0 && spinCount < 3 && !isSpinning && (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "0.75rem" }}>
+              {spinCount === 1 ? "Primer descarte completado." : "Segundo descarte completado. El siguiente tiro es definitivo."}
+            </p>
+          )}
+        </div>
+
+        {spinCount < 3 && (
+          <button
+            onClick={spin}
+            disabled={isSpinning}
+            className="btn"
+            style={{
+              width: "100%",
+              maxWidth: "360px",
+              padding: "1rem 1.5rem",
+              fontSize: "1rem",
+              backgroundColor: spinCount === 2 ? "var(--accent-red)" : "var(--accent-blue)",
+              color: "#fff"
+            }}
+          >
+            {isSpinning ? "Seleccionando..." : spinCount === 0 ? "Iniciar primer tiro (1/3)" : spinCount === 1 ? "Girar segundo tiro (2/3)" : "Ejecutar tiro definitivo (3/3)"}
+          </button>
+        )}
+
+        {winner && !isSpinning && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", maxWidth: "400px", margin: "0 auto" }}>
+            <p style={{ color: "var(--accent-green)", fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Seleccionado definitivo
+            </p>
+
+            {listType === "suggestion" && (
+              <button
+                onClick={promoteToOfficial}
+                className="btn"
+                style={{ width: "100%", backgroundColor: "var(--accent-purple)", color: "#fff" }}
+              >
+                Mover a Lista Oficial
+              </button>
+            )}
+
+            <button
+              onClick={setArtistOfTheWeek}
+              disabled={isCrowning}
+              className="btn"
+              style={{
+                width: "100%",
+                backgroundColor: "var(--accent-amber)",
+                color: "#000",
+                fontWeight: 700
+              }}
+            >
+              {isCrowning ? "Sincronizando con Spotify..." : "Asignar como Artista de la Semana"}
+            </button>
+
+            <button
+              onClick={resetRoulette}
+              style={{
+                marginTop: "0.5rem",
+                background: "none",
+                border: "none",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                textDecoration: "underline"
+              }}
+            >
+              Reiniciar ruleta
+            </button>
+          </div>
+        )}
+      </section>
+    </main>
   );
 };

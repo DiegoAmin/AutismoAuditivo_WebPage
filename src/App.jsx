@@ -1,66 +1,60 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import { Landing } from "./pages/Landing";
-import { Dashboard } from "./pages/Dashboard";
-import { Roulette } from "./pages/Roulette";
-import { Lists } from "./pages/Lists";
-import { useAuth } from "./context/AuthContext";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { Landing } from "./pages/Landing.jsx";
+import { Dashboard } from "./pages/Dashboard.jsx";
+import { Roulette } from "./pages/Roulette.jsx";
+import { Lists } from "./pages/Lists.jsx";
 
-// Componente del Menú de Navegación
+const PrivateRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/" />;
+};
+
 const Navigation = () => {
   const { user, logout } = useAuth();
-  
-  // Si no hay usuario logueado, no mostramos el menú (pantalla Landing)
-  if (!user) return null; 
+  if (!user) return null;
 
   return (
-    <nav style={{ 
-      background: "#111", 
-      padding: "15px 30px", 
-      display: "flex", 
-      justifyContent: "space-between", 
-      alignItems: "center", 
-      borderBottom: "2px solid #333",
-      marginBottom: "20px"
-    }}>
-      <div style={{ display: "flex", gap: "25px" }}>
-        <Link to="/dashboard" style={{ color: "#2196F3", textDecoration: "none", fontWeight: "bold", fontSize: "1.2rem" }}>
-          🏠 Dashboard
-        </Link>
-        <Link to="/roulette" style={{ color: "#ffcc00", textDecoration: "none", fontWeight: "bold", fontSize: "1.2rem" }}>
-          🎡 Ruleta
-        </Link>
-        <Link to="/lists" style={{ color: "#4CAF50", textDecoration: "none", fontWeight: "bold", fontSize: "1.2rem" }}>
-          🗃️ Base de Datos
-        </Link>
-      </div>
-      
-      <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-        <span style={{ color: "#aaa", fontSize: "0.9rem" }}>{user.displayName}</span>
-        <button 
-          onClick={logout} 
-          style={{ background: "#f44336", color: "white", border: "none", padding: "8px 15px", borderRadius: "5px", cursor: "pointer", fontWeight: "bold" }}
+    <header className="navbar">
+      <nav className="nav-links">
+        <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+          Dashboard
+        </NavLink>
+        <NavLink to="/roulette" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+          Ruleta
+        </NavLink>
+        <NavLink to="/lists" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+          Base de Datos
+        </NavLink>
+      </nav>
+      <div className="nav-user">
+        <span className="user-name">{user.displayName}</span>
+        <button
+          onClick={logout}
+          className="btn"
+          style={{ background: "rgba(239, 68, 68, 0.15)", color: "#f87171", border: "1px solid rgba(239, 68, 68, 0.3)", padding: "0.4rem 0.85rem", fontSize: "0.8rem" }}
         >
-          Salir
+          Cerrar sesión
         </button>
       </div>
-    </nav>
+    </header>
   );
 };
 
-function App() {
+export function App() {
   return (
-    <BrowserRouter>
-      {/* El menú va afuera de las rutas para que siempre esté visible */}
-      <Navigation />
-      
-      <Routes>
-        {/* Rutas */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/roulette" element={<Roulette />} />
-        <Route path="/lists" element={<Lists />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <Router>
+        <Navigation />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/roulette" element={<PrivateRoute><Roulette /></PrivateRoute>} />
+          <Route path="/lists" element={<PrivateRoute><Lists /></PrivateRoute>} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
