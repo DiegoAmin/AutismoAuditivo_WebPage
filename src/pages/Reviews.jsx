@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { doc, onSnapshot, collection, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import EmojiPicker from "emoji-picker-react";
 
 const StarIcon = ({ filled, size = 22 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,6 +31,8 @@ export const Reviews = () => {
   
   const [activeCommentReviewId, setActiveCommentReviewId] = useState(null);
   const [replyText, setReplyText] = useState("");
+
+  const [emojiPickerReviewId, setEmojiPickerReviewId] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -132,8 +135,9 @@ export const Reviews = () => {
     try { await deleteDoc(doc(db, "reviews", reviewId)); } catch (e) { console.error(e); }
   };
 
-  const handleReaction = async (reviewId, emoji, currentReactions = {}) => {
+  const handleReaction = async (reviewId, emojiObject, currentReactions = {}) => {
     if (!user) return;
+    const emoji = emojiObject.emoji;
     const reviewRef = doc(db, "reviews", reviewId);
     let updatedReactions = { ...currentReactions };
     const userList = updatedReactions[emoji] || [];
@@ -147,6 +151,7 @@ export const Reviews = () => {
 
     try {
       await updateDoc(reviewRef, { reactions: updatedReactions });
+      setEmojiPickerReviewId(null);
     } catch (error) {
       console.error("Error al actualizar reacción:", error);
     }
@@ -292,9 +297,10 @@ export const Reviews = () => {
                 const reactions = rev.reactions || {};
                 const commentsList = rev.comments || [];
                 const isReplying = activeCommentReviewId === rev.id;
+                const isPickingEmoji = emojiPickerReviewId === rev.id;
 
                 return (
-                  <article key={rev.id} className="review-card">
+                  <article key={rev.id} className="review-card" style={{ position: "relative" }}>
                     <div className="review-header">
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                         <span style={{ fontWeight: 600 }}>{rev.userName}</span>
@@ -340,7 +346,7 @@ export const Reviews = () => {
                       </div>
                     )}
 
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", borderTop: "1px solid var(--border)", paddingTop: "0.75rem", position: "relative" }}>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
                         {Object.entries(reactions).map(([emoji, usersArray]) => {
                           const hasReacted = usersArray.includes(user?.uid);
@@ -348,7 +354,7 @@ export const Reviews = () => {
                             <button
                               key={emoji}
                               type="button"
-                              onClick={() => handleReaction(rev.id, emoji, reactions)}
+                              onClick={() => handleReaction(rev.id, { emoji }, reactions)}
                               style={{
                                 background: hasReacted ? "var(--bg-elevated)" : "var(--bg-main)",
                                 border: `1px solid ${hasReacted ? "var(--accent-blue)" : "var(--border)"}`,
@@ -368,16 +374,12 @@ export const Reviews = () => {
                           );
                         })}
 
+                        {/* Botón y Selector Masivo con emoji-picker-react */}
                         <div style={{ position: "relative", display: "inline-block" }}>
                           <button
                             type="button"
-                            onClick={() => {
-                              const customEmoji = prompt("Escribe o pega tu emoji (puedes usar el menú de Win + . o Cmd + Ctrl + Espacio):");
-                              if (customEmoji && customEmoji.trim()) {
-                                handleReaction(rev.id, customEmoji.trim(), reactions);
-                              }
-                            }}
-                            title="Agregar otro emoji"
+                            onClick={() => setEmojiPickerReviewId(isPickingEmoji ? null : rev.id)}
+                            title="Agregar emoji"
                             style={{
                               background: "var(--bg-main)",
                               border: "1px dashed var(--border)",
@@ -390,6 +392,25 @@ export const Reviews = () => {
                           >
                             + 😊
                           </button>
+
+                          {/* Popover con el buscador de todos los emojis del mundo */}
+                          {isPickingEmoji && (
+                            <div style={{
+                              position: "absolute",
+                              bottom: "125%",
+                              left: 0,
+                              zIndex: 50,
+                              boxShadow: "0 10px 25px rgba(0,0,0,0.6)",
+                              borderRadius: "12px"
+                            }}>
+                              <EmojiPicker
+                                theme="dark"
+                                onEmojiClick={(emojiData) => handleReaction(rev.id, emojiData, reactions)}
+                                width={300}
+                                height={380}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
 
