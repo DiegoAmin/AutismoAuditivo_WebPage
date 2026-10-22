@@ -28,13 +28,17 @@ const Navigation = () => {
         </NavLink>
         <NavLink to="/reviews" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
           Opiniones
-        </NavLink> {/* 2. Pestaña de Opiniones agregada */}
+        </NavLink>
         <NavLink to="/lists" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
           Base de Datos
         </NavLink>
+        {/* Pestaña de Perfil agregada */}
+        <NavLink to="/profile" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+          Mi Perfil
+        </NavLink>
       </nav>
       <div className="nav-user">
-        <span className="user-name">{user.displayName}</span>
+        <span className="user-name">{user.displayName || "Usuario"}</span>
         <button
           onClick={logout}
           className="btn"
