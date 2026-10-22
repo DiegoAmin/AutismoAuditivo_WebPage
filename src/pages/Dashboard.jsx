@@ -8,6 +8,9 @@ export const Dashboard = () => {
   const [currentArtist, setCurrentArtist] = useState(null);
   const [userProgress, setUserProgress] = useState("por_escuchar");
   const [groupProgress, setGroupProgress] = useState([]);
+  
+  // Estado para guardar los perfiles personalizados
+  const [usersData, setUsersData] = useState({});
 
   useEffect(() => {
     if (!user) return;
@@ -23,7 +26,14 @@ export const Dashboard = () => {
       setUserProgress(myProgress ? myProgress.status : "por_escuchar");
     });
 
-    return () => { unsubArtist(); unsubProgress(); };
+    // Escuchar la colección de usuarios para obtener fotos y usernames
+    const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+      const map = {};
+      snapshot.forEach(doc => { map[doc.id] = doc.data(); });
+      setUsersData(map);
+    });
+
+    return () => { unsubArtist(); unsubProgress(); unsubUsers(); };
   }, [user, currentArtist?.name]);
 
   const handleUpdateProgress = async (status) => {
@@ -162,6 +172,10 @@ export const Dashboard = () => {
               <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {groupProgress.map(friend => {
                   const meta = statusMeta[friend.status] || statusMeta.por_escuchar;
+                  const profile = usersData[friend.id]; // Buscar perfil personalizado
+                  const finalName = profile?.username || friend.displayName;
+                  const finalPhoto = profile?.photoURL || null;
+
                   return (
                     <li
                       key={friend.id}
@@ -176,7 +190,15 @@ export const Dashboard = () => {
                         gap: "0.5rem"
                       }}
                     >
-                      <span style={{ fontWeight: 500, fontSize: "0.92rem" }}>{friend.displayName}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        {finalPhoto ? (
+                          <img src={finalPhoto} alt="" style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                        ) : (
+                          <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", border: "1px solid var(--border)" }}>👽</div>
+                        )}
+                        <span style={{ fontWeight: 500, fontSize: "0.92rem" }}>{finalName}</span>
+                      </div>
+                      
                       <span style={{
                         display: "inline-flex",
                         alignItems: "center",
