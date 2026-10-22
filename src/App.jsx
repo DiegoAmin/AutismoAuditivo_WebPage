@@ -5,6 +5,7 @@ import { Landing } from "./pages/Landing.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { Roulette } from "./pages/Roulette.jsx";
 import { Lists } from "./pages/Lists.jsx";
+import { Reviews } from "./pages/Reviews.jsx"; // 1. Importado correctamente
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth();
@@ -24,6 +25,9 @@ const Navigation = () => {
         <NavLink to="/roulette" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
           Ruleta
         </NavLink>
+        <NavLink to="/reviews" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+          Opiniones
+        </NavLink> {/* 2. Pestaña de Opiniones agregada */}
         <NavLink to="/lists" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
           Base de Datos
         </NavLink>
@@ -51,8 +55,8 @@ export function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/roulette" element={<PrivateRoute><Roulette /></PrivateRoute>} />
+          <Route path="/reviews" element={<PrivateRoute><Reviews /></PrivateRoute>} /> {/* 3. Ruta registrada */}
           <Route path="/lists" element={<PrivateRoute><Lists /></PrivateRoute>} />
-          
         </Routes>
       </Router>
     </AuthProvider>
