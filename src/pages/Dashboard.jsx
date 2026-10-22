@@ -55,7 +55,7 @@ export const Dashboard = () => {
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
           Panel de seguimiento
         </p>
-        <h1 className="page-title">Artista de la Semana</h1>
+        <h1 className="page-title">Artista Seleccionado</h1>
       </div>
 
       {!isArtistValid ? (
