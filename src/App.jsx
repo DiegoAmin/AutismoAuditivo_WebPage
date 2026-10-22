@@ -52,6 +52,7 @@ export function App() {
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/roulette" element={<PrivateRoute><Roulette /></PrivateRoute>} />
           <Route path="/lists" element={<PrivateRoute><Lists /></PrivateRoute>} />
+          <Route path="/reviews" element={<PrivateRoute><Reviews /></PrivateRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
