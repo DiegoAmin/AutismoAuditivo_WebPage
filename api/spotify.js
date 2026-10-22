@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 
@@ -22,17 +20,22 @@ export default async function handler(req, res) {
   try {
     const token = await getSpotifyToken();
 
-    // 1. Búsqueda de canciones para el buscador libre
+    // 1. Búsqueda de canciones
     if (searchTrack) {
       const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchTrack)}&type=track&limit=5`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
+      
+      if (!data.tracks || !data.tracks.items) {
+        return res.status(200).json([]);
+      }
+
       const tracks = data.tracks.items.map(t => ({
-        name: t.name,
-        artist: t.artists.map(a => a.name).join(', '),
-        image: t.album.images[0]?.url || null,
-        url: t.external_urls.spotify
+        name: t.name || 'Desconocido',
+        artist: t.artists ? t.artists.map(a => a.name).join(', ') : 'Desconocido',
+        image: t.album && t.album.images && t.album.images[0] ? t.album.images[0].url : null,
+        url: t.external_urls ? t.external_urls.spotify : ''
       }));
       return res.status(200).json(tracks);
     }
@@ -43,16 +46,21 @@ export default async function handler(req, res) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
+
+      if (!data.albums || !data.albums.items) {
+        return res.status(200).json([]);
+      }
+
       const albums = data.albums.items.map(a => ({
-        name: a.name,
-        artist: a.artists.map(art => art.name).join(', '),
-        image: a.images[0]?.url || null,
-        url: a.external_urls.spotify
+        name: a.name || 'Desconocido',
+        artist: a.artists ? a.artists.map(art => art.name).join(', ') : 'Desconocido',
+        image: a.images && a.images[0] ? a.images[0].url : null,
+        url: a.external_urls ? a.external_urls.spotify : ''
       }));
       return res.status(200).json(albums);
     }
 
-    // 3. Búsqueda clásica de artista (para la ruleta y dashboard)
+    // 3. Búsqueda de artista
     if (!artist) {
       return res.status(400).json({ error: 'Falta el parámetro de búsqueda' });
     }
@@ -62,15 +70,15 @@ export default async function handler(req, res) {
     });
     const data = await response.json();
     
-    if (!data.artists.items.length) {
+    if (!data.artists || !data.artists.items.length) {
       return res.status(404).json({ error: 'Artista no encontrado' });
     }
 
     const artistData = data.artists.items[0];
     return res.status(200).json({
       name: artistData.name,
-      url: artistData.external_urls.spotify,
-      image: artistData.images[0]?.url || null
+      url: artistData.external_urls ? artistData.external_urls.spotify : '',
+      image: artistData.images && artistData.images[0] ? artistData.images[0].url : null
     });
 
   } catch (error) {
