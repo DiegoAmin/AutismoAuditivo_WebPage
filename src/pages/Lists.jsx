@@ -46,6 +46,7 @@ export const Lists = () => {
   };
 
   const currentArtists = artists.filter(a => a.category === activeTab);
+  const sortByAlphabet = (a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
   const oficialList = currentArtists.filter(a => a.status === "official");
   const sugerenciaList = currentArtists.filter(a => a.status === "suggestion");
   const pasaronList = currentArtists.filter(a => a.status === "history");
