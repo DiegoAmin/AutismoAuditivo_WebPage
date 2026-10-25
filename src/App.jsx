@@ -5,7 +5,9 @@ import { Landing } from "./pages/Landing.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { Roulette } from "./pages/Roulette.jsx";
 import { Lists } from "./pages/Lists.jsx";
-import { Reviews } from "./pages/Reviews.jsx"; // 1. Importado correctamente
+import { Reviews } from "./pages/Reviews.jsx"; 
+import { Profile } from "./pages/Profile.jsx";
+import { Recommendations } from "./pages/Recommendations.jsx";
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth();
@@ -27,13 +29,19 @@ const Navigation = () => {
         </NavLink>
         <NavLink to="/reviews" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
           Opiniones
-        </NavLink> {/* 2. Pestaña de Opiniones agregada */}
+        </NavLink>
+        <NavLink to="/muro" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+          Joyitas
+        </NavLink>
         <NavLink to="/lists" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
           Base de Datos
         </NavLink>
+        <NavLink to="/profile" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+          Mi Perfil
+        </NavLink>
       </nav>
       <div className="nav-user">
-        <span className="user-name">{user.displayName}</span>
+        <span className="user-name">{user.displayName || "Usuario"}</span>
         <button
           onClick={logout}
           className="btn"
@@ -55,8 +63,10 @@ export function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/roulette" element={<PrivateRoute><Roulette /></PrivateRoute>} />
-          <Route path="/reviews" element={<PrivateRoute><Reviews /></PrivateRoute>} /> {/* 3. Ruta registrada */}
+          <Route path="/reviews" element={<PrivateRoute><Reviews /></PrivateRoute>} /> 
+          <Route path="/muro" element={<PrivateRoute><Recommendations /></PrivateRoute>} />
           <Route path="/lists" element={<PrivateRoute><Lists /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
