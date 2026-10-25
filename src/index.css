@@ -210,34 +210,53 @@ body {
 }
 
 /* --- ADAPTACIÓN MÓVIL (CELULARES) --- */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .navbar {
     flex-direction: column;
-    align-items: stretch;
-    padding: 0.75rem 1rem;
-    gap: 0.65rem;
+    padding: 1rem;
+    gap: 1rem;
   }
 
+  /* Barrita deslizable horizontalmente para los links */
   .nav-links {
-    justify-content: space-between;
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
     width: 100%;
-    background-color: var(--bg-main);
-    padding: 0.25rem;
-    border-radius: 10px;
-    border: 1px solid var(--border);
+    gap: 0.5rem;
+    padding-bottom: 0.25rem; /* Espacio sutil por si le quieres meter borde */
+    -webkit-overflow-scrolling: touch; /* Scroll de mantequilla en iPhone */
+    justify-content: flex-start; /* Resetea el justify-content del flex original */
+    background: transparent;
+    border: none;
+  }
+
+  /* Ocultar la barra gris espantosa del scroll (Chrome, Safari y Opera) */
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Ocultar scrollbar en IE, Edge y Firefox */
+  .nav-links {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   .nav-link {
-    flex: 1;
+    flex: 0 0 auto; /* Evita que el texto se aplaste para caber */
     text-align: center;
-    padding: 0.5rem 0.25rem;
-    font-size: 0.82rem;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+    background-color: rgba(255, 255, 255, 0.05); /* Botones tipo pastilla sutiles */
+    border: 1px solid var(--border);
   }
 
+  /* Alineación limpia del usuario en móvil */
   .nav-user {
     justify-content: space-between;
     width: 100%;
-    padding-top: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
   }
 
   .page-container {
@@ -257,6 +276,7 @@ body {
     flex-direction: column;
   }
 }
+
 /* --- TABLERO DE BASE DE DATOS (3 COLUMNAS RESPONSIVAS) --- */
 .lists-board {
   display: grid;
@@ -333,6 +353,7 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
 /* --- MÓDULO DE OPINIONES Y RATINGS --- */
 .star-rating {
   display: inline-flex;
