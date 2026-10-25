@@ -100,7 +100,7 @@ export const Recommendations = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("¿Quitar esta joyita del muro?")) return;
+    if (!window.confirm("¿Quitar este Banger del muro?")) return;
     try {
       await deleteDoc(doc(db, "recommendations", id));
     } catch (error) {
@@ -140,7 +140,7 @@ export const Recommendations = () => {
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
           Comunidad Libre
         </p>
-        <h1 className="page-title" style={{ marginBottom: "0.25rem" }}>Muro de Joyitas</h1>
+        <h1 className="page-title" style={{ marginBottom: "0.25rem" }}>Muro de Bangers</h1>
         <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
           Recomienda un álbum o una rola que traigas clavada en la cabeza.
         </p>
@@ -335,7 +335,7 @@ export const Recommendations = () => {
       {/* PARRILLA DE VINILOS (GRID) */}
       {filteredRecs.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: "3.5rem" }}>
-          <p style={{ color: "var(--text-muted)" }}>Aún no hay recomendaciones en esta categoría. ¡Sé el primero en soltar una joyita!</p>
+          <p style={{ color: "var(--text-muted)" }}>Aún no hay recomendaciones en esta categoría. ¡Sé el primero en soltar un Banger!</p>
         </div>
       ) : (
         <div style={{

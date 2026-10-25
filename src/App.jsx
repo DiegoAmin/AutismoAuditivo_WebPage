@@ -31,7 +31,7 @@ const Navigation = () => {
           Opiniones
         </NavLink>
         <NavLink to="/muro" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
-          Joyitas
+          Bangers
         </NavLink>
         <NavLink to="/lists" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
           Base de Datos
