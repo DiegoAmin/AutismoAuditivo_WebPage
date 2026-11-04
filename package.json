@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "emoji-picker-react": "^5.1.0",
+    "fast-average-color": "^9.6.0",
     "firebase": "^12.7.0",
+    "framer-motion": "^14.9.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.10.1"

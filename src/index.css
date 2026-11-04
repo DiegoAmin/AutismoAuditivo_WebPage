@@ -14,6 +14,16 @@
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+.light-mode {
+  --bg-main: #fafafa;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-elevated: #f4f4f5;
+  --border: rgba(0, 0, 0, 0.1);
+  --border-hover: rgba(0, 0, 0, 0.2);
+  --text-main: #09090b;
+  --text-muted: #71717a;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
