@@ -499,39 +499,46 @@ h1, h2, .page-title, .artist-hero-name, .brand-text {
   flex-wrap: wrap;
 }
 /* --- CONTROLES SEGMENTADOS (PILDORAS DE SELECCIÓN) --- */
-.segmented-control,
-div[style*="background-color: var(--bg-main)"],
-div[style*="background: var(--bg-main)"] {
+.segmented-control {
   display: inline-flex;
-  background-color: var(--bg-elevated) !important;
-  padding: 0.25rem;
-  border-radius: 12px !important;
-  border: 1px solid var(--border) !important;
-  gap: 0.25rem;
+  background-color: var(--bg-elevated);
+  padding: 0.3rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  gap: 0.3rem;
 }
 
-/* Estilo unificado para los botones de opción dentro de la ruleta y listas */
-button.segmented-btn,
+/* Botones dentro de los controles */
+.segmented-btn,
 .segmented-control button,
-.card button[style*="background: transparent"],
-.card button[style*="background: none"] {
-  padding: 0.5rem 1rem !important;
-  border: none !important;
-  background: transparent !important;
-  color: var(--text-muted) !important;
-  font-weight: 600 !important;
-  font-size: 0.85rem !important;
-  border-radius: 9px !important;
+.card button[style*="background"] {
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 9px;
   cursor: pointer;
-  transition: all 0.2s ease !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Estado activo / seleccionado con resalte sutil */
-button.segmented-btn.active,
+/* Efecto hover: se ilumina sutilmente para avisar que es interactivo */
+.segmented-btn:hover,
+.segmented-control button:hover {
+  color: var(--text-main);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-hover);
+}
+
+/* Estado Activo / Seleccionado: Resalta con fuerza */
+.segmented-btn.active,
 .segmented-control button[class*="active"],
-.card button[style*="background-color: var(--text-main)"],
-.card button[style*="background: var(--text-main)"] {
+.segmented-control button[style*="background-color: var(--text-main)"],
+.segmented-control button[style*="background: var(--text-main)"] {
   background-color: var(--text-main) !important;
   color: #070709 !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border-color: var(--text-main) !important;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+  font-weight: 700;
 }
