@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { doc, onSnapshot, setDoc, collection } from "firebase/firestore";
 import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import {link} from "react-router-dom";
+import {Link} from "react-router-dom";
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -188,7 +188,7 @@ export const Dashboard = () => {
                         gap: "0.5rem"
                       }}
                     >
-                      <link to={`/user/${friend.id}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
+                      <Link to={`/user/${friend.id}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
                         {finalPhoto ? (
                           <img
                             src={finalPhoto}
@@ -203,7 +203,7 @@ export const Dashboard = () => {
                           <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", border: "1px solid var(--border)" }}>👽</div>
                         )}
                         <span style={{ fontWeight: 500, fontSize: "0.92rem" }}>{finalName}</span>
-                      </link>
+                      </Link>
 
                       <span style={{
                         display: "inline-flex",
