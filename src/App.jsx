@@ -8,6 +8,7 @@ import { Lists } from "./pages/Lists.jsx";
 import { Reviews } from "./pages/Reviews.jsx"; 
 import { Profile } from "./pages/Profile.jsx";
 import { Recommendations } from "./pages/Recommendations.jsx";
+import { PublicProfile } from "./pages/PublicProfile.jsx";
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth();
@@ -67,6 +68,7 @@ export function App() {
           <Route path="/muro" element={<PrivateRoute><Recommendations /></PrivateRoute>} />
           <Route path="/lists" element={<PrivateRoute><Lists /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/user/:uid" element={<PrivateRoute><PublicProfile /></PrivateRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
