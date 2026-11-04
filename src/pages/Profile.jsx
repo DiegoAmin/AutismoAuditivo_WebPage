@@ -196,7 +196,7 @@ export const Profile = () => {
           {/* TOP 5 CANCIONES */}
           <div style={{ marginBottom: "2.5rem", padding: "1.5rem", backgroundColor: "var(--bg-main)", borderRadius: "12px", border: "1px solid var(--border)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>🎵 Top Canciones</h3>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>Top Canciones</h3>
               <span style={{ fontSize: "0.8rem", fontWeight: 600, color: topTracks.length === 5 ? "var(--accent-amber)" : "var(--text-muted)" }}>
                 {topTracks.length} / 5
               </span>
@@ -243,7 +243,7 @@ export const Profile = () => {
           {/* TOP 5 ÁLBUMES */}
           <div style={{ marginBottom: "2.5rem", padding: "1.5rem", backgroundColor: "var(--bg-main)", borderRadius: "12px", border: "1px solid var(--border)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>💿 Top Álbumes</h3>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>Top Álbumes</h3>
               <span style={{ fontSize: "0.8rem", fontWeight: 600, color: topAlbums.length === 5 ? "var(--accent-amber)" : "var(--text-muted)" }}>
                 {topAlbums.length} / 5
               </span>
