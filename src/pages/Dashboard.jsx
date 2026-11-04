@@ -12,7 +12,7 @@ export const Dashboard = () => {
   const [userProgress, setUserProgress] = useState("por_escuchar");
   const [groupProgress, setGroupProgress] = useState([]);
   const [usersData, setUsersData] = useState({});
-  const [glowColor, setGlowColor] = useState('rgba(29, 185, 84, 0.12)'); // Verde por defecto
+  const [glowColor, setGlowColor] = useState('rgba(29, 185, 84, 0.12)'); // Verde sutil por defecto
 
   useEffect(() => {
     if (!user) return;
@@ -37,11 +37,10 @@ export const Dashboard = () => {
     return () => { unsubArtist(); unsubProgress(); unsubUsers(); };
   }, [user, currentArtist?.name]);
 
-  // Extracción del color dominante de la imagen del artista
+  // Extracción del color dominante
   useEffect(() => {
     if (currentArtist && currentArtist.spotifyImage) {
       const fac = new FastAverageColor();
-      // Creamos un objeto Image para evitar problemas de CORS al leer los píxeles
       const img = new Image();
       img.crossOrigin = 'Anonymous';
       img.src = currentArtist.spotifyImage;
@@ -49,14 +48,22 @@ export const Dashboard = () => {
       img.onload = () => {
         try {
           const color = fac.getColor(img);
-          // Aplicamos el color dominante con opacidad baja para el glow
-          setGlowColor(`rgba(${color.value[0]}, ${color.value[1]}, ${color.value[2]}, 0.15)`);
+          // Modificamos directamente el fondo del body para que no haya cortes de caja
+          document.body.style.backgroundImage = `radial-gradient(ellipse 90% 60% at 50% -10%, rgba(${color.value[0]}, ${color.value[1]}, ${color.value[2]}, 0.12), transparent)`;
+          
+          // Guardamos un color más fuerte solo para el resplandor detrás de la foto circular
+          setGlowColor(`rgba(${color.value[0]}, ${color.value[1]}, ${color.value[2]}, 0.35)`);
           fac.destroy();
         } catch (e) {
           console.error("Error extrayendo color:", e);
         }
       };
     }
+
+    // Limpiador: Cuando salgamos del Dashboard, regresamos el body a su estado neutral
+    return () => {
+      document.body.style.backgroundImage = "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 185, 84, 0.08), transparent)";
+    };
   }, [currentArtist?.spotifyImage]);
 
   const handleUpdateProgress = async (status) => {
@@ -103,11 +110,7 @@ export const Dashboard = () => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      // Inyectamos el glow dinámico directo al fondo de la página
-      style={{
-        backgroundImage: `radial-gradient(ellipse 80% 50% at 50% -20%, ${glowColor}, transparent)`,
-        minHeight: 'calc(100vh - 70px)' // Ajuste para el header
-      }}
+      // Eliminamos el backgroundImage del style local
     >
       <motion.div variants={itemVariants} initial="hidden" animate="show" style={{ marginBottom: "1.75rem", textAlign: "left" }}>
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
@@ -123,26 +126,24 @@ export const Dashboard = () => {
           </p>
         </motion.div>
       ) : (
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-        >
+        <motion.div variants={containerVariants} initial="hidden" animate="show">
+          
           {/* TARJETA DEL ARTISTA */}
           <motion.section variants={itemVariants} className="card" style={{ textAlign: "center", position: "relative", overflow: "hidden" }}>
             
-            {/* Efecto de resplandor sutil detrás de la foto */}
+            {/* Efecto de resplandor intenso detrás de la foto */}
             <div style={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '150px',
-              height: '150px',
+              width: '180px',
+              height: '180px',
               background: glowColor,
-              filter: 'blur(40px)',
+              filter: 'blur(50px)',
               borderRadius: '50%',
-              zIndex: 0
+              zIndex: 0,
+              pointerEvents: 'none'
             }}/>
 
             <div style={{ marginBottom: "1.25rem", position: 'relative', zIndex: 1 }}>
