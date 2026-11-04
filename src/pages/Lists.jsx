@@ -73,7 +73,8 @@ export const Lists = () => {
 
   const handleDeleteArtist = async (listType, artist) => {
     if (!isAdmin) return alert("Solo los administradores pueden borrar artistas de la base de datos.");
-    if (!window.confirm(`¿Eliminar a ${artist.name} de la lista?`)) return;
+    const artistName = typeof artist === "string" ? artist : artist.name;
+    if (!window.confirm(`¿Eliminar a ${artistName} de la lista?`)) return;
 
     try {
       const docRef = doc(db, "globals", listType === "oficial" ? "officialList" : "suggestedList");
@@ -85,7 +86,10 @@ export const Lists = () => {
     }
   };
 
-  const ogsCount = officialArtists.filter(a => a.category === "ogs").length + suggestedArtists.filter(a => a.category === "ogs").length;
+  // Función para soportar tanto strings viejos como objetos nuevos
+  const getCategory = (a) => typeof a === "string" ? "actuales" : (a.category || "actuales");
+
+  const ogsCount = officialArtists.filter(a => getCategory(a) === "ogs").length + suggestedArtists.filter(a => getCategory(a) === "ogs").length;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -185,21 +189,28 @@ export const Lists = () => {
           </div>
           <ul className="board-list">
             <AnimatePresence>
-              {officialArtists.filter(a => a.category !== "ogs").map((artist) => (
-                <motion.li key={artist.id || artist.name} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
-                    {artist.spotifyImage ? <img src={artist.spotifyImage} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
-                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{artist.name}</span>
-                  </div>
-                  {isAdmin && (
-                    <button type="button" onClick={() => handleDeleteArtist("oficial", artist)} className="delete-btn" title="Eliminar">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                    </button>
-                  )}
-                </motion.li>
-              ))}
+              {officialArtists.filter(a => getCategory(a) !== "ogs").map((artist, idx) => {
+                const isString = typeof artist === "string";
+                const name = isString ? artist : artist.name;
+                const img = isString ? null : artist.spotifyImage;
+                const key = `${name}-${idx}`;
+
+                return (
+                  <motion.li key={key} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
+                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
+                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{name}</span>
+                    </div>
+                    {isAdmin && (
+                      <button type="button" onClick={() => handleDeleteArtist("oficial", artist)} className="delete-btn" title="Eliminar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      </button>
+                    )}
+                  </motion.li>
+                );
+              })}
             </AnimatePresence>
-            {officialArtists.filter(a => a.category !== "ogs").length === 0 && <p style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>Vacío</p>}
+            {officialArtists.filter(a => getCategory(a) !== "ogs").length === 0 && <p style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>Vacío</p>}
           </ul>
         </motion.div>
 
@@ -207,25 +218,32 @@ export const Lists = () => {
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="board-column">
           <div className="board-header">
             <h3 style={{ fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.5rem" }}>💡 Sugerencias</h3>
-            <span style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.1)", padding: "0.2rem 0.6rem", borderRadius: "999px", fontWeight: 600 }}>{suggestedArtists.filter(a => a.category !== "ogs").length}</span>
+            <span style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.1)", padding: "0.2rem 0.6rem", borderRadius: "999px", fontWeight: 600 }}>{suggestedArtists.filter(a => getCategory(a) !== "ogs").length}</span>
           </div>
           <ul className="board-list">
             <AnimatePresence>
-              {suggestedArtists.filter(a => a.category !== "ogs").map((artist) => (
-                <motion.li key={artist.id || artist.name} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
-                    {artist.spotifyImage ? <img src={artist.spotifyImage} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
-                    <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{artist.name}</span>
-                  </div>
-                  {isAdmin && (
-                    <button type="button" onClick={() => handleDeleteArtist("sugerencias", artist)} className="delete-btn" title="Eliminar">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                    </button>
-                  )}
-                </motion.li>
-              ))}
+              {suggestedArtists.filter(a => getCategory(a) !== "ogs").map((artist, idx) => {
+                const isString = typeof artist === "string";
+                const name = isString ? artist : artist.name;
+                const img = isString ? null : artist.spotifyImage;
+                const key = `${name}-${idx}`;
+
+                return (
+                  <motion.li key={key} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
+                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
+                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{name}</span>
+                    </div>
+                    {isAdmin && (
+                      <button type="button" onClick={() => handleDeleteArtist("sugerencias", artist)} className="delete-btn" title="Eliminar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      </button>
+                    )}
+                  </motion.li>
+                );
+              })}
             </AnimatePresence>
-            {suggestedArtists.filter(a => a.category !== "ogs").length === 0 && <p style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>Vacío</p>}
+            {suggestedArtists.filter(a => getCategory(a) !== "ogs").length === 0 && <p style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>Vacío</p>}
           </ul>
         </motion.div>
 
@@ -237,14 +255,21 @@ export const Lists = () => {
           </div>
           <ul className="board-list">
             <AnimatePresence>
-              {[...officialArtists, ...suggestedArtists].filter(a => a.category === "ogs").map((artist) => {
-                const isOfficial = officialArtists.some(oa => oa.id === artist.id || oa.name === artist.name);
+              {[...officialArtists, ...suggestedArtists].filter(a => getCategory(a) === "ogs").map((artist, idx) => {
+                const isString = typeof artist === "string";
+                const name = isString ? artist : artist.name;
+                const img = isString ? null : artist.spotifyImage;
+                const key = `${name}-${idx}`;
+                
+                // Revisamos si viene de oficial (ya sea string u objeto)
+                const isOfficial = officialArtists.some(oa => (typeof oa === "string" ? oa : oa.name) === name);
+
                 return (
-                  <motion.li key={artist.id || artist.name} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                  <motion.li key={key} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
-                      {artist.spotifyImage ? <img src={artist.spotifyImage} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
+                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
                       <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500, fontSize: "0.85rem", lineHeight: 1.2 }}>{artist.name}</span>
+                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500, fontSize: "0.85rem", lineHeight: 1.2 }}>{name}</span>
                         <span style={{ fontSize: "0.65rem", color: isOfficial ? "var(--accent-green)" : "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>{isOfficial ? "Oficial" : "Sugerencia"}</span>
                       </div>
                     </div>
