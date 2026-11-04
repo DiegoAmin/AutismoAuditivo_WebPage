@@ -188,7 +188,7 @@ export const Dashboard = () => {
                         gap: "0.5rem"
                       }}
                     >
-                      <Link to={`/user/${friend.id}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
+                      <link to={`/user/${friend.id}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
                         {finalPhoto ? (
                           <img
                             src={finalPhoto}
@@ -203,7 +203,7 @@ export const Dashboard = () => {
                           <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", border: "1px solid var(--border)" }}>👽</div>
                         )}
                         <span style={{ fontWeight: 500, fontSize: "0.92rem" }}>{finalName}</span>
-                      </Link>
+                      </link>
 
                       <span style={{
                         display: "inline-flex",
