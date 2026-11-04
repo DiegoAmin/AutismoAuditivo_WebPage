@@ -147,7 +147,7 @@ export const Roulette = () => {
 
       {!isAdmin && (
         <div style={{ padding: "0.85rem 1.25rem", backgroundColor: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.25)", borderRadius: "12px", color: "var(--accent-amber)", marginBottom: "1.5rem", fontSize: "0.85rem", fontWeight: 600 }}>
-          🔒 Modo Espectador: Solo los administradores pueden tirar la ruleta oficial.
+          Modo Espectador: Solo los administradores pueden tirar la ruleta oficial.
         </div>
       )}
 
@@ -165,7 +165,7 @@ export const Roulette = () => {
               onClick={() => handleConfigChange("category", "actuales")}
               style={{ flex: 1 }}
             >
-              ✨ Actuales
+              Actuales
             </button>
             <button
               type="button"
@@ -174,7 +174,7 @@ export const Roulette = () => {
               onClick={() => handleConfigChange("category", "ogs")}
               style={{ flex: 1 }}
             >
-              🔥 OG's
+              OG's
             </button>
           </div>
         </div>
@@ -191,7 +191,7 @@ export const Roulette = () => {
               onClick={() => handleConfigChange("listType", "official")}
               style={{ flex: 1 }}
             >
-              🛡️ Oficial
+              Oficial
             </button>
             <button
               type="button"
@@ -200,7 +200,7 @@ export const Roulette = () => {
               onClick={() => handleConfigChange("listType", "suggestion")}
               style={{ flex: 1 }}
             >
-              💡 Sugerencias
+              Sugerencias
             </button>
           </div>
         </div>
@@ -308,7 +308,7 @@ export const Roulette = () => {
               ? "Girar primer tiro (1/3)"
               : spinCount === 1
               ? "Girar segundo tiro (2/3)"
-              : "🔥 Ejecutar tiro definitivo (3/3)"}
+              : "Ejecutar tiro definitivo (3/3)"}
           </motion.button>
         )}
 
@@ -320,7 +320,7 @@ export const Roulette = () => {
             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.85rem", maxWidth: "420px", margin: "1rem auto 0" }}
           >
             <p style={{ color: "var(--accent-green)", fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              🎉 Artista Definitivo
+              Artista Definitivo
             </p>
 
             {listType === "suggestion" && (
@@ -341,7 +341,7 @@ export const Roulette = () => {
               className="btn"
               style={{ width: "100%", backgroundColor: "var(--accent-green)", color: "#000", fontWeight: 800, padding: "0.85rem", borderRadius: "999px" }}
             >
-              {isCrowning ? "Sincronizando..." : "👑 Coronar como Artista de la Semana"}
+              {isCrowning ? "Sincronizando..." : "Coronar como Artista de la Semana"}
             </button>
 
             <button
