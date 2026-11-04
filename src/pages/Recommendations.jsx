@@ -164,7 +164,7 @@ export const Recommendations = () => {
                 fontWeight: 700
               }}
             >
-              💿 Recomendar Álbum
+               Recomendar Álbum
             </button>
             <button
               type="button"
@@ -179,7 +179,7 @@ export const Recommendations = () => {
                 fontWeight: 700
               }}
             >
-              🎵 Recomendar Canción
+              Recomendar Canción
             </button>
           </div>
 
@@ -193,7 +193,7 @@ export const Recommendations = () => {
                   )}
                   <div>
                     <span style={{ fontSize: "0.7rem", textTransform: "uppercase", color: "var(--accent-green)", fontWeight: 700, display: "block" }}>
-                      {recType === "album" ? "💿 Álbum" : "🎵 Canción"}
+                      {recType === "album" ? "Álbum" : "🎵 Canción"}
                     </span>
                     <strong style={{ fontSize: "0.95rem" }}>{selectedItem.name}</strong>
                     <span style={{ color: "var(--text-muted)", fontSize: "0.85rem", display: "block" }}>{selectedItem.artist}</span>
