@@ -59,7 +59,25 @@ export default async function handler(req, res) {
       }));
       return res.status(200).json(albums);
     }
+    
+    if (searchArtist) {
+      const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchArtist)}&type=artist&limit=5`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
 
+      if (!data.artists || !data.artists.items) {
+        return res.status(200).json([]);
+      }
+
+      const artists = data.artists.items.map(a => ({
+        id: a.id,
+        name: a.name || 'Desconocido',
+        image: a.images && a.images[0] ? a.images[0].url : null,
+        url: a.external_urls ? a.external_urls.spotify : ''
+      }));
+      return res.status(200).json(artists);
+    }
     // 3. Búsqueda de artista
     if (!artist) {
       return res.status(400).json({ error: 'Falta el parámetro de búsqueda' });
