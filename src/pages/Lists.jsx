@@ -186,7 +186,7 @@ export const Lists = () => {
           <ul className="board-list">
             <AnimatePresence>
               {officialArtists.filter(a => a.category !== "ogs").map((artist) => (
-                <motion.li key={artist.id} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                <motion.li key={artist.id || artist.name} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
                     {artist.spotifyImage ? <img src={artist.spotifyImage} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
                     <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{artist.name}</span>
@@ -212,7 +212,7 @@ export const Lists = () => {
           <ul className="board-list">
             <AnimatePresence>
               {suggestedArtists.filter(a => a.category !== "ogs").map((artist) => (
-                <motion.li key={artist.id} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                <motion.li key={artist.id || artist.name} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
                     {artist.spotifyImage ? <img src={artist.spotifyImage} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
                     <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{artist.name}</span>
@@ -238,9 +238,9 @@ export const Lists = () => {
           <ul className="board-list">
             <AnimatePresence>
               {[...officialArtists, ...suggestedArtists].filter(a => a.category === "ogs").map((artist) => {
-                const isOfficial = officialArtists.some(oa => oa.id === artist.id);
+                const isOfficial = officialArtists.some(oa => oa.id === artist.id || oa.name === artist.name);
                 return (
-                  <motion.li key={artist.id} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                  <motion.li key={artist.id || artist.name} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
                       {artist.spotifyImage ? <img src={artist.spotifyImage} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
                       <div style={{ display: "flex", flexDirection: "column" }}>
