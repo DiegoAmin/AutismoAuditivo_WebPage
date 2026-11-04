@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config.js";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const PublicProfile = () => {
   const { uid } = useParams();
@@ -9,7 +10,6 @@ export const PublicProfile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Estados para manejar el hover individual en cada tarjeta del grid
   const [hoveredTrackIndex, setHoveredTrackIndex] = useState(null);
   const [hoveredAlbumIndex, setHoveredAlbumIndex] = useState(null);
 
@@ -22,7 +22,7 @@ export const PublicProfile = () => {
           setProfile(docSnap.data());
         }
       } catch (error) {
-        console.error("Error al cargar perfil público:", error);
+        console.error("Error al cargar perfil:", error);
       } finally {
         setLoading(false);
       }
@@ -34,32 +34,29 @@ export const PublicProfile = () => {
 
   if (!profile) return (
     <div className="page-container" style={{ textAlign: "center", padding: "4rem" }}>
-      <h2 style={{ marginBottom: "1rem" }}>Perfil no encontrado</h2>
+      <h2>Perfil no encontrado</h2>
       <p style={{ color: "var(--text-muted)", marginBottom: "2rem" }}>Este compa aún no ha configurado su perfil.</p>
-      <button onClick={() => navigate(-1)} className="btn" style={{ backgroundColor: "var(--bg-elevated)" }}>Regresar</button>
+      <button onClick={() => navigate(-1)} className="btn">Regresar</button>
     </div>
   );
 
+  const showcaseTrack = profile.showcaseTrack;
   const topTracks = profile.topTracks || [];
   const topAlbums = profile.topAlbums || [];
 
-  // Función constructora para generar la "Parrilla de Vinilos" de los Tops
   const renderGrid = (items, type, hoveredIndex, setHoveredIndex) => {
     if (items.length === 0) {
       return <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", fontStyle: "italic" }}>Aún no hay {type} en este Top.</p>;
     }
 
     return (
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-        gap: "1.25rem"
-      }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))", gap: "1.25rem" }}>
         {items.map((item, idx) => {
           const isHovered = hoveredIndex === idx;
           return (
-            <article
+            <motion.article
               key={idx}
+              whileHover={{ y: -6 }}
               style={{
                 background: "var(--bg-card)",
                 border: "1px solid var(--border)",
@@ -67,103 +64,50 @@ export const PublicProfile = () => {
                 overflow: "hidden",
                 position: "relative",
                 aspectRatio: "1 / 1",
-                transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                transform: isHovered ? "translateY(-4px)" : "none",
-                boxShadow: isHovered ? "0 12px 28px rgba(0,0,0,0.6)" : "none"
+                boxShadow: isHovered ? "0 16px 30px rgba(0,0,0,0.6)" : "none"
               }}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              {/* PORTADA EN ALTA CALIDAD */}
               {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    transition: "transform 0.35s ease",
-                    transform: isHovered ? "scale(1.08)" : "scale(1)"
-                  }}
-                />
+                <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.35s ease", transform: isHovered ? "scale(1.08)" : "scale(1)" }} />
               ) : (
-                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3rem", backgroundColor: "#111" }}>
-                  {type === 'canciones' ? '🎵' : '💿'}
-                </div>
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3rem", backgroundColor: "#111" }}>{type === 'canciones' ? '🎵' : '💿'}</div>
               )}
 
-              {/* MEDALLA DEL RANKING (#1, #2, etc.) */}
-              <span style={{
-                position: "absolute",
-                top: "10px",
-                left: "10px",
-                background: "var(--accent-amber)",
-                color: "#000",
-                padding: "0.25rem 0.65rem",
-                borderRadius: "999px",
-                fontSize: "0.85rem",
-                fontWeight: 800,
-                zIndex: 2,
-                boxShadow: "0 4px 10px rgba(0,0,0,0.5)"
-              }}>
+              <span style={{ position: "absolute", top: "10px", left: "10px", background: "var(--accent-amber)", color: "#000", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.8rem", fontWeight: 800, zIndex: 2 }}>
                 #{idx + 1}
               </span>
 
-              {/* CRISTAL DE HOVER CON INFO Y BOTÓN DE SPOTIFY */}
               <div
                 onClick={() => setHoveredIndex(isHovered ? null : idx)}
                 style={{
                   position: "absolute",
                   inset: 0,
-                  background: "rgba(9, 9, 11, 0.85)",
-                  backdropFilter: "blur(5px)",
-                  padding: "1rem",
+                  background: "rgba(9, 9, 11, 0.88)",
+                  backdropFilter: "blur(6px)",
+                  padding: "0.85rem",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
                   alignItems: "center",
                   textAlign: "center",
                   opacity: isHovered ? 1 : 0,
-                  transition: "opacity 0.22s ease",
+                  transition: "opacity 0.2s ease",
                   pointerEvents: isHovered ? "auto" : "none",
                   zIndex: 3
                 }}
               >
-                <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#fff", marginBottom: "0.2rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                  {item.name}
-                </h4>
-                <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "1rem", display: "block" }}>
-                  {item.artist}
-                </span>
+                <h4 style={{ fontSize: "0.9rem", fontWeight: 700, color: "#fff", marginBottom: "0.2rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{item.name}</h4>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.8rem" }}>{item.artist}</span>
 
                 {item.url && (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn"
-                    style={{
-                      backgroundColor: "var(--accent-green)",
-                      color: "#000",
-                      padding: "0.4rem 0.9rem",
-                      borderRadius: "999px",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      textDecoration: "none",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.3rem"
-                    }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                    </svg>
+                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn" style={{ backgroundColor: "var(--accent-green)", color: "#000", padding: "0.35rem 0.8rem", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700 }}>
                     Escuchar
                   </a>
                 )}
               </div>
-            </article>
+            </motion.article>
           );
         })}
       </div>
@@ -171,15 +115,21 @@ export const PublicProfile = () => {
   };
 
   return (
-    <main className="page-container" style={{ maxWidth: "1050px", margin: "0 auto" }}>
-      <button onClick={() => navigate(-1)} className="btn" style={{ marginBottom: "1.5rem", padding: "0.4rem 0.8rem", fontSize: "0.85rem", backgroundColor: "transparent", border: "1px solid var(--border)" }}>
+    <motion.main 
+      className="page-container" 
+      style={{ maxWidth: "1050px", margin: "0 auto" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <button onClick={() => navigate(-1)} className="btn" style={{ marginBottom: "1.5rem", padding: "0.4rem 0.85rem", fontSize: "0.85rem", backgroundColor: "transparent", border: "1px solid var(--border)" }}>
         ← Volver
       </button>
 
       <section className="card" style={{ padding: "2.5rem 2rem" }}>
-        {/* CABECERA DEL PERFIL */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "3rem" }}>
-          <div style={{ width: "120px", height: "120px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", border: "3px solid var(--accent-blue)", overflow: "hidden", marginBottom: "1.25rem", boxShadow: "0 8px 20px rgba(0,0,0,0.5)" }}>
+        {/* CABECERA */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "2.5rem" }}>
+          <div style={{ width: "120px", height: "120px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", border: "3px solid var(--accent-blue)", overflow: "hidden", marginBottom: "1.25rem", boxShadow: "0 10px 25px rgba(0,0,0,0.5)" }}>
             <img 
               src={profile.photoURL || `https://ui-avatars.com/api/?name=${profile.username || "User"}&background=1c1c21&color=fafafa`} 
               alt="Avatar" 
@@ -187,26 +137,81 @@ export const PublicProfile = () => {
               onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${profile.username || "User"}&background=1c1c21&color=fafafa`; }} 
             />
           </div>
-          <h1 style={{ fontSize: "1.8rem", fontWeight: 800, margin: 0, letterSpacing: "-0.03em" }}>{profile.username || "Usuario"}</h1>
+          <h1 style={{ fontSize: "2rem", fontWeight: 800, margin: 0 }}>{profile.username || "Usuario"}</h1>
         </div>
 
-        {/* PARRILLA DE CANCIONES */}
+        {/* SHOWCASE TRACK DESTACADO */}
+        {showcaseTrack && (
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(18, 18, 23, 0.95) 100%)",
+              border: "1px solid rgba(245, 158, 11, 0.35)",
+              borderRadius: "20px",
+              padding: "1.5rem 2rem",
+              marginBottom: "3rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "1.5rem",
+              boxShadow: "0 12px 30px rgba(0,0,0,0.4)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+              <div style={{ position: "relative" }}>
+                {showcaseTrack.image && (
+                  <img
+                    src={showcaseTrack.image}
+                    alt=""
+                    style={{ width: "85px", height: "85px", borderRadius: "12px", objectFit: "cover", boxShadow: "0 8px 20px rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  />
+                )}
+                <span style={{ position: "absolute", bottom: "-6px", right: "-6px", background: "var(--accent-amber)", borderRadius: "50%", padding: "4px", fontSize: "0.8rem", display: "flex" }}>⚡</span>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--accent-amber)", display: "block", marginBottom: "0.25rem" }}>
+                  Obsesión Actual / Himno
+                </span>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0 0 0.2rem 0" }}>{showcaseTrack.name}</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: 0 }}>{showcaseTrack.artist}</p>
+              </div>
+            </div>
+
+            {showcaseTrack.url && (
+              <a
+                href={showcaseTrack.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn"
+                style={{
+                  backgroundColor: "var(--accent-green)",
+                  color: "#000",
+                  fontWeight: 800,
+                  fontSize: "0.85rem",
+                  padding: "0.7rem 1.4rem",
+                  borderRadius: "999px",
+                  boxShadow: "0 6px 18px rgba(30, 215, 96, 0.25)"
+                }}
+              >
+                Escuchar en Spotify
+              </a>
+            )}
+          </motion.div>
+        )}
+
+        {/* PARRILLAS */}
         <div style={{ marginBottom: "3.5rem" }}>
-          <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            Top 5 Canciones
-          </h3>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "1.25rem" }}>Top 5 Canciones</h3>
           {renderGrid(topTracks, "canciones", hoveredTrackIndex, setHoveredTrackIndex)}
         </div>
 
-        {/* PARRILLA DE ÁLBUMES */}
         <div>
-          <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            Top 5 Álbumes
-          </h3>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, marginBottom: "1.25rem" }}>Top 5 Álbumes</h3>
           {renderGrid(topAlbums, "álbumes", hoveredAlbumIndex, setHoveredAlbumIndex)}
         </div>
       </section>
-      
-    </main>
+    </motion.main>
   );
 };
