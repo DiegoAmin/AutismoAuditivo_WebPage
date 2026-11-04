@@ -52,7 +52,7 @@ export const PublicProfile = () => {
     return (
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
         gap: "1.25rem"
       }}>
         {items.map((item, idx) => {
@@ -171,7 +171,7 @@ export const PublicProfile = () => {
   };
 
   return (
-    <main className="page-container" style={{ maxWidth: "900px", margin: "0 auto" }}>
+    <main className="page-container" style={{ maxWidth: "1050px", margin: "0 auto" }}>
       <button onClick={() => navigate(-1)} className="btn" style={{ marginBottom: "1.5rem", padding: "0.4rem 0.8rem", fontSize: "0.85rem", backgroundColor: "transparent", border: "1px solid var(--border)" }}>
         ← Volver
       </button>
