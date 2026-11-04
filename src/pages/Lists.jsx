@@ -14,8 +14,8 @@ export const Lists = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [selectedArtist, setSelectedArtist] = useState(null);
   
-  const [destination, setDestination] = useState("oficial"); // 'oficial' | 'sugerencias'
-  const [category, setCategory] = useState("actuales"); // 'actuales' | 'ogs'
+  const [destination, setDestination] = useState("oficial");
+  const [category, setCategory] = useState("actuales");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -28,7 +28,6 @@ export const Lists = () => {
     return () => { unsubOfficial(); unsubSuggested(); };
   }, []);
 
-  // Búsqueda en Spotify
   useEffect(() => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
       setSearchResults([]);
@@ -86,21 +85,8 @@ export const Lists = () => {
     }
   };
 
-  // Función para soportar tanto strings viejos como objetos nuevos
   const getCategory = (a) => typeof a === "string" ? "actuales" : (a.category || "actuales");
-
   const ogsCount = officialArtists.filter(a => getCategory(a) === "ogs").length + suggestedArtists.filter(a => getCategory(a) === "ogs").length;
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.05 } }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -10 },
-    show: { opacity: 1, x: 0 },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
-  };
 
   return (
     <motion.main 
@@ -111,14 +97,13 @@ export const Lists = () => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ marginBottom: "2rem" }}>
+      <div style={{ marginBottom: "2rem" }}>
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Archivo Central</p>
         <h1 className="page-title">Base de Datos</h1>
-      </motion.div>
+      </div>
 
-      {/* PANEL DE CONTROL PARA AGREGAR ARTISTAS */}
       {isAdmin && (
-        <motion.section initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="card" style={{ marginBottom: "2.5rem", padding: "1.5rem 2rem" }}>
+        <section className="card" style={{ marginBottom: "2.5rem", padding: "1.5rem 2rem" }}>
           <form onSubmit={handleAddArtist} style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "flex-end" }}>
             
             <div style={{ flex: "1 1 300px", position: "relative" }}>
@@ -169,18 +154,17 @@ export const Lists = () => {
               </div>
             </div>
 
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} type="submit" disabled={isSubmitting || !selectedArtist} className="btn" style={{ backgroundColor: "var(--text-main)", color: "#000", fontWeight: 700, height: "42px", flex: "0 1 auto" }}>
+            <button type="submit" disabled={isSubmitting || !selectedArtist} className="btn" style={{ backgroundColor: "var(--text-main)", color: "#000", fontWeight: 700, height: "42px", flex: "0 1 auto" }}>
               {isSubmitting ? "..." : "Agregar"}
-            </motion.button>
+            </button>
           </form>
-        </motion.section>
+        </section>
       )}
 
-      {/* TABLERO DE 3 COLUMNAS */}
       <div className="lists-board">
         
         {/* COLUMNA 1: LISTA OFICIAL */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="board-column">
+        <div className="board-column">
           <div className="board-header">
             <h3 style={{ fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.5rem" }}>🛡️ Lista Oficial</h3>
             <span style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.1)", padding: "0.2rem 0.6rem", borderRadius: "999px", fontWeight: 600, color: officialArtists.length >= 70 ? "var(--accent-red)" : "var(--text-main)" }}>
@@ -191,14 +175,15 @@ export const Lists = () => {
             <AnimatePresence>
               {officialArtists.filter(a => getCategory(a) !== "ogs").map((artist, idx) => {
                 const isString = typeof artist === "string";
-                const name = isString ? artist : artist.name;
+                const name = isString ? artist : (artist.name || "Desconocido");
                 const img = isString ? null : artist.spotifyImage;
                 const key = `${name}-${idx}`;
 
                 return (
-                  <motion.li key={key} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                  <motion.li key={key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} layout className="board-item">
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
-                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
+                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline'; }} /> : null}
+                      <span style={{ fontSize: "1.1rem", display: img ? 'none' : 'inline' }}>🎤</span>
                       <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{name}</span>
                     </div>
                     {isAdmin && (
@@ -212,10 +197,10 @@ export const Lists = () => {
             </AnimatePresence>
             {officialArtists.filter(a => getCategory(a) !== "ogs").length === 0 && <p style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>Vacío</p>}
           </ul>
-        </motion.div>
+        </div>
 
         {/* COLUMNA 2: SUGERENCIAS */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="board-column">
+        <div className="board-column">
           <div className="board-header">
             <h3 style={{ fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.5rem" }}>💡 Sugerencias</h3>
             <span style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.1)", padding: "0.2rem 0.6rem", borderRadius: "999px", fontWeight: 600 }}>{suggestedArtists.filter(a => getCategory(a) !== "ogs").length}</span>
@@ -224,14 +209,15 @@ export const Lists = () => {
             <AnimatePresence>
               {suggestedArtists.filter(a => getCategory(a) !== "ogs").map((artist, idx) => {
                 const isString = typeof artist === "string";
-                const name = isString ? artist : artist.name;
+                const name = isString ? artist : (artist.name || "Desconocido");
                 const img = isString ? null : artist.spotifyImage;
                 const key = `${name}-${idx}`;
 
                 return (
-                  <motion.li key={key} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                  <motion.li key={key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} layout className="board-item">
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
-                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
+                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline'; }} /> : null}
+                      <span style={{ fontSize: "1.1rem", display: img ? 'none' : 'inline' }}>🎤</span>
                       <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>{name}</span>
                     </div>
                     {isAdmin && (
@@ -245,10 +231,10 @@ export const Lists = () => {
             </AnimatePresence>
             {suggestedArtists.filter(a => getCategory(a) !== "ogs").length === 0 && <p style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>Vacío</p>}
           </ul>
-        </motion.div>
+        </div>
 
         {/* COLUMNA 3: OG's */}
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="board-column">
+        <div className="board-column">
           <div className="board-header">
             <h3 style={{ fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.5rem" }}>🔥 Categoría OG's</h3>
             <span style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--accent-amber)", padding: "0.2rem 0.6rem", borderRadius: "999px", fontWeight: 600 }}>{ogsCount}</span>
@@ -257,17 +243,16 @@ export const Lists = () => {
             <AnimatePresence>
               {[...officialArtists, ...suggestedArtists].filter(a => getCategory(a) === "ogs").map((artist, idx) => {
                 const isString = typeof artist === "string";
-                const name = isString ? artist : artist.name;
+                const name = isString ? artist : (artist.name || "Desconocido");
                 const img = isString ? null : artist.spotifyImage;
                 const key = `${name}-${idx}`;
-                
-                // Revisamos si viene de oficial (ya sea string u objeto)
                 const isOfficial = officialArtists.some(oa => (typeof oa === "string" ? oa : oa.name) === name);
 
                 return (
-                  <motion.li key={key} variants={itemVariants} initial="hidden" animate="show" exit="exit" layout className="board-item">
+                  <motion.li key={key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} layout className="board-item">
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", overflow: "hidden" }}>
-                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.1rem" }}>🎤</span>}
+                      {img ? <img src={img} alt="" style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline'; }} /> : null}
+                      <span style={{ fontSize: "1.1rem", display: img ? 'none' : 'inline' }}>🎤</span>
                       <div style={{ display: "flex", flexDirection: "column" }}>
                         <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500, fontSize: "0.85rem", lineHeight: 1.2 }}>{name}</span>
                         <span style={{ fontSize: "0.65rem", color: isOfficial ? "var(--accent-green)" : "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>{isOfficial ? "Oficial" : "Sugerencia"}</span>
@@ -284,9 +269,9 @@ export const Lists = () => {
             </AnimatePresence>
             {ogsCount === 0 && <p style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>Vacío</p>}
           </ul>
-        </motion.div>
+        </div>
 
       </div>
     </motion.main>
   );
-};
+}
