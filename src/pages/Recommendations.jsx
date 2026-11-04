@@ -7,12 +7,12 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 const VIBE_TAGS = [
-  { id: "obra_maestra", label: "🤯 Obra maestra", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
-  { id: "deep_vibes", label: "🚬 Deep vibes", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.15)" },
-  { id: "energia", label: "⚡ Energía pura", color: "#ef4444", bg: "rgba(239, 68, 68, 0.15)" },
-  { id: "chill", label: "🌊 Chill / Flotar", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.15)" },
-  { id: "joya_oculta", label: "💎 Joya oculta", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" },
-  { id: "en_loop", label: "🔁 En loop", color: "#ec4899", bg: "rgba(236, 72, 153, 0.15)" }
+  { id: "obra_maestra", label: "Obra maestra", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
+  { id: "deep_vibes", label: "Deep vibes", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.15)" },
+  { id: "energia", label: "Energía pura", color: "#ef4444", bg: "rgba(239, 68, 68, 0.15)" },
+  { id: "chill", label: "Chill / Flotar", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.15)" },
+  { id: "joya_oculta", label: "Joya oculta", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" },
+  { id: "en_loop", label: "En loop", color: "#ec4899", bg: "rgba(236, 72, 153, 0.15)" }
 ];
 
 export const Recommendations = () => {
@@ -151,10 +151,10 @@ export const Recommendations = () => {
         <form onSubmit={handleSubmit}>
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
             <button type="button" onClick={() => { setRecType("album"); setSelectedItem(null); setSearchQuery(""); }} className="btn" style={{ flex: 1, backgroundColor: recType === "album" ? "var(--text-main)" : "var(--bg-main)", color: recType === "album" ? "#09090b" : "var(--text-muted)", border: "1px solid var(--border)", fontWeight: 700 }}>
-              💿 Recomendar Álbum
+              Recomendar Álbum
             </button>
             <button type="button" onClick={() => { setRecType("track"); setSelectedItem(null); setSearchQuery(""); }} className="btn" style={{ flex: 1, backgroundColor: recType === "track" ? "var(--text-main)" : "var(--bg-main)", color: recType === "track" ? "#09090b" : "var(--text-muted)", border: "1px solid var(--border)", fontWeight: 700 }}>
-              🎵 Recomendar Canción
+              Recomendar Canción
             </button>
           </div>
 

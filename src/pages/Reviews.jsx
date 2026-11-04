@@ -4,6 +4,7 @@ import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import EmojiPicker from "emoji-picker-react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 const StarIcon = ({ filled, size = 22 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -15,13 +16,12 @@ export const Reviews = () => {
   const { user, isAdmin } = useAuth();
   const [currentArtist, setCurrentArtist] = useState(null);
   const [reviews, setReviews] = useState([]);
-
   const [usersData, setUsersData] = useState({});
 
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
-
+  
   const [favoriteTracks, setFavoriteTracks] = useState([]);
   const [trackQuery, setTrackQuery] = useState("");
   const [trackResults, setTrackResults] = useState([]);
@@ -31,7 +31,7 @@ export const Reviews = () => {
   const [albumResults, setAlbumResults] = useState([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   const [activeCommentReviewId, setActiveCommentReviewId] = useState(null);
   const [replyText, setReplyText] = useState("");
 
@@ -45,7 +45,6 @@ export const Reviews = () => {
     const unsubReviews = onSnapshot(collection(db, "reviews"), (snapshot) => {
       setReviews(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-
     const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
       const map = {};
       snapshot.forEach(doc => { map[doc.id] = doc.data(); });
@@ -133,11 +132,8 @@ export const Reviews = () => {
         comments: existingReview?.comments || [],
         updatedAt: new Date()
       });
-    } catch (error) {
-      console.error("Error al guardar reseña:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch (error) { console.error("Error al guardar reseña:", error); } 
+    finally { setIsSubmitting(false); }
   };
 
   const handleDelete = async (reviewId) => {
@@ -162,9 +158,7 @@ export const Reviews = () => {
     try {
       await updateDoc(reviewRef, { reactions: updatedReactions });
       setEmojiPickerReviewId(null);
-    } catch (error) {
-      console.error("Error al actualizar reacción:", error);
-    }
+    } catch (error) { console.error("Error al actualizar reacción:", error); }
   };
 
   const handleAddComment = async (reviewId, commentsList = []) => {
@@ -181,18 +175,13 @@ export const Reviews = () => {
     try {
       await updateDoc(reviewRef, { comments: [...commentsList, newComment] });
       setReplyText("");
-    } catch (error) {
-      console.error("Error al comentar:", error);
-    }
+    } catch (error) { console.error("Error al comentar:", error); }
   };
 
   const handleDeleteComment = async (reviewId, commentsList, commentId) => {
     const updated = commentsList.filter(c => c.id !== commentId);
-    try {
-      await updateDoc(doc(db, "reviews", reviewId), { comments: updated });
-    } catch (error) {
-      console.error("Error al borrar comentario:", error);
-    }
+    try { await updateDoc(doc(db, "reviews", reviewId), { comments: updated }); } 
+    catch (error) { console.error("Error al borrar comentario:", error); }
   };
 
   const isArtistValid = currentArtist && currentArtist.name;
@@ -200,27 +189,45 @@ export const Reviews = () => {
     ? (artistReviews.reduce((acc, r) => acc + r.rating, 0) / artistReviews.length).toFixed(1)
     : null;
 
+  // Variantes de animación
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  };
+
   return (
-    <main className="page-container" style={{ maxWidth: "900px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "1rem", marginBottom: "1.75rem" }}>
+    <motion.main 
+      className="page-container" 
+      style={{ maxWidth: "900px" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "1rem", marginBottom: "1.75rem" }}>
         <div>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Foro de discusión</p>
           <h1 className="page-title" style={{ marginBottom: 0 }}>{isArtistValid ? `Opiniones: ${currentArtist.name}` : "Opiniones"}</h1>
         </div>
         {averageRating && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", backgroundColor: "var(--bg-card)", border: "1px solid var(--border)", padding: "0.5rem 1rem", borderRadius: "12px" }}>
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ display: "flex", alignItems: "center", gap: "0.6rem", backgroundColor: "var(--bg-card)", border: "1px solid var(--border)", padding: "0.5rem 1rem", borderRadius: "12px", boxShadow: "0 8px 20px rgba(0,0,0,0.3)" }}>
             <span style={{ color: "var(--accent-amber)" }}><StarIcon filled={true} size={20} /></span>
             <span style={{ fontSize: "1.25rem", fontWeight: 800 }}>{averageRating}</span>
             <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>({artistReviews.length})</span>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {!isArtistValid ? (
         <div className="card" style={{ textAlign: "center", padding: "3.5rem" }}><p style={{ color: "var(--text-muted)" }}>Sin artista activo.</p></div>
       ) : (
         <>
-          <section className="card" style={{ marginBottom: "2rem" }}>
+          <motion.section initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }} className="card" style={{ marginBottom: "2rem" }}>
             <form onSubmit={handleSubmit}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
                 <div>
@@ -229,296 +236,221 @@ export const Reviews = () => {
                 </div>
                 <div className="star-rating" onMouseLeave={() => setHoverRating(0)}>
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <button key={star} type="button" className={`star-btn ${star <= (hoverRating || rating) ? "active" : ""}`} onClick={() => setRating(star)} onMouseEnter={() => setHoverRating(star)}>
+                    <motion.button 
+                      whileHover={{ scale: 1.2 }} 
+                      whileTap={{ scale: 0.9 }} 
+                      key={star} 
+                      type="button" 
+                      className={`star-btn ${star <= (hoverRating || rating) ? "active" : ""}`} 
+                      onClick={() => setRating(star)} 
+                      onMouseEnter={() => setHoverRating(star)}
+                    >
                       <StarIcon filled={star <= (hoverRating || rating)} size={26} />
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
 
               <textarea className="textarea-field" placeholder={`Escribe tu reseña sobre ${currentArtist.name}...`} value={comment} onChange={(e) => setComment(e.target.value)} style={{ marginBottom: "1.25rem" }} />
 
+              {/* Búsqueda de Top 3 Canciones */}
               <div style={{ marginBottom: "1.25rem", borderTop: "1px solid var(--border)", paddingTop: "1.25rem" }}>
                 <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.4rem" }}>Tus 3 canciones favoritas</h3>
                 <div style={{ position: "relative", marginBottom: "0.75rem" }}>
                   <input type="text" className="input-field" placeholder="Busca una canción en Spotify..." value={trackQuery} onChange={(e) => setTrackQuery(e.target.value)} style={{ width: "100%" }} />
-                  {trackResults.length > 0 && (
-                    <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", zIndex: 10, marginTop: "4px", maxHeight: "200px", overflowY: "auto" }}>
-                      {trackResults.map((t, idx) => (
-                        <div key={idx} onClick={() => addTrack(t)} style={{ padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }} onMouseOver={(e) => e.currentTarget.style.background = "var(--bg-elevated)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
-                          {t.image && <img src={t.image} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", objectFit: "cover" }} />}
-                          <div style={{ fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            <strong>{t.name}</strong> <span style={{ color: "var(--text-muted)" }}>({t.artist})</span>
+                  <AnimatePresence>
+                    {trackResults.length > 0 && (
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", zIndex: 10, marginTop: "4px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 10px 25px rgba(0,0,0,0.6)" }}>
+                        {trackResults.map((t, idx) => (
+                          <div key={idx} onClick={() => addTrack(t)} style={{ padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }} onMouseOver={(e) => e.currentTarget.style.background = "var(--bg-elevated)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                            {t.image && <img src={t.image} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", objectFit: "cover" }} />}
+                            <div style={{ fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              <strong>{t.name}</strong> <span style={{ color: "var(--text-muted)" }}>({t.artist})</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+                
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                  {favoriteTracks.map((t, idx) => (
-                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--bg-main)", border: "1px solid var(--border)", padding: "0.35rem 0.75rem", borderRadius: "8px", fontSize: "0.85rem" }}>
-                      <span>{idx + 1}. {t.name}</span>
-                      <button type="button" onClick={() => removeTrack(idx)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontWeight: "bold" }}>×</button>
-                    </div>
-                  ))}
+                  <AnimatePresence>
+                    {favoriteTracks.map((t, idx) => (
+                      <motion.div key={idx} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--bg-main)", border: "1px solid var(--border)", padding: "0.35rem 0.75rem", borderRadius: "8px", fontSize: "0.85rem" }}>
+                        <span>{idx + 1}. {t.name}</span>
+                        <button type="button" onClick={() => removeTrack(idx)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontWeight: "bold" }}>×</button>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
               </div>
 
+              {/* Búsqueda de Álbum Favorito */}
               <div style={{ marginBottom: "1.5rem" }}>
                 <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.4rem" }}>Tu álbum favorito</h3>
                 {favoriteAlbum ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-main)", border: "1px solid var(--border)", padding: "0.5rem 0.75rem", borderRadius: "8px" }}>
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-main)", border: "1px solid var(--border)", padding: "0.5rem 0.75rem", borderRadius: "8px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.85rem" }}>
                       {favoriteAlbum.image && <img src={favoriteAlbum.image} alt="" style={{ width: "35px", height: "35px", borderRadius: "4px", objectFit: "cover" }} />}
                       <strong>{favoriteAlbum.name}</strong>
                     </div>
                     <button type="button" onClick={() => setFavoriteAlbum(null)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "0.85rem" }}>Cambiar</button>
-                  </div>
+                  </motion.div>
                 ) : (
                   <div style={{ position: "relative" }}>
                     <input type="text" className="input-field" placeholder="Busca un álbum en Spotify..." value={albumQuery} onChange={(e) => setAlbumQuery(e.target.value)} style={{ width: "100%" }} />
-                    {albumResults.length > 0 && (
-                      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", zIndex: 10, marginTop: "4px", maxHeight: "200px", overflowY: "auto" }}>
-                        {albumResults.map((a, idx) => (
-                          <div key={idx} onClick={() => { setFavoriteAlbum(a); setAlbumQuery(""); setAlbumResults([]); }} style={{ padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }} onMouseOver={(e) => e.currentTarget.style.background = "var(--bg-elevated)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
-                            {a.image && <img src={a.image} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", objectFit: "cover" }} />}
-                            <div style={{ fontSize: "0.85rem" }}><strong>{a.name}</strong> <span style={{ color: "var(--text-muted)" }}>({a.artist})</span></div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <AnimatePresence>
+                      {albumResults.length > 0 && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", zIndex: 10, marginTop: "4px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 10px 25px rgba(0,0,0,0.6)" }}>
+                          {albumResults.map((a, idx) => (
+                            <div key={idx} onClick={() => { setFavoriteAlbum(a); setAlbumQuery(""); setAlbumResults([]); }} style={{ padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }} onMouseOver={(e) => e.currentTarget.style.background = "var(--bg-elevated)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                              {a.image && <img src={a.image} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", objectFit: "cover" }} />}
+                              <div style={{ fontSize: "0.85rem" }}><strong>{a.name}</strong> <span style={{ color: "var(--text-muted)" }}>({a.artist})</span></div>
+                            </div>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button type="submit" disabled={isSubmitting || rating === 0} className="btn" style={{ backgroundColor: "var(--text-main)", color: "#09090b", fontWeight: 700, padding: "0.75rem 1.5rem" }}>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} type="submit" disabled={isSubmitting || rating === 0} className="btn" style={{ backgroundColor: "var(--text-main)", color: "#09090b", fontWeight: 700, padding: "0.75rem 1.5rem" }}>
                   {isSubmitting ? "Guardando..." : "Publicar reseña y selecciones"}
-                </button>
+                </motion.button>
               </div>
             </form>
-          </section>
+          </motion.section>
 
           <section>
-            <h4 style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>Reseñas del grupo ({artistReviews.length})</h4>
-            <div className="reviews-list">
-              {artistReviews.map((rev) => {
-                const reactions = rev.reactions || {};
-                const commentsList = rev.comments || [];
-                const isReplying = activeCommentReviewId === rev.id;
-                const isPickingEmoji = emojiPickerReviewId === rev.id;
+            <motion.h4 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>
+              Reseñas del grupo ({artistReviews.length})
+            </motion.h4>
+            
+            <motion.div variants={containerVariants} initial="hidden" animate="show" className="reviews-list">
+              <AnimatePresence>
+                {artistReviews.map((rev) => {
+                  const reactions = rev.reactions || {};
+                  const commentsList = rev.comments || [];
+                  const isReplying = activeCommentReviewId === rev.id;
+                  const isPickingEmoji = emojiPickerReviewId === rev.id;
+                  const authorProfile = usersData[rev.userId];
+                  const authorName = authorProfile?.username || rev.userName;
+                  const authorPhoto = authorProfile?.photoURL || null;
 
-                const authorProfile = usersData[rev.userId];
-                const authorName = authorProfile?.username || rev.userName;
-                const authorPhoto = authorProfile?.photoURL || null;
-
-                return (
-                  <article key={rev.id} className="review-card" style={{ position: "relative" }}>
-                    <div className="review-header">
-                      {/* Aquí empieza el Link clickeable */}
-                      <Link to={`/user/${rev.userId}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
-                        {authorPhoto ? (
-                          <img src={authorPhoto} alt="" style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${authorName}&background=1c1c21&color=fafafa`; }} />
-                        ) : (
-                          <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", fontSize: "0.9rem" }}>👽</div>
-                        )}
-                        {/* Agregué un hover de color azul al nombre para que se note que es clickeable */}
-                        <span style={{ fontWeight: 600, transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "var(--accent-blue)"} onMouseOut={(e) => e.target.style.color = "var(--text-main)"}>
-                          {authorName}
-                        </span>
-                      </Link>
-                      
-                      <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
-                        {[1, 2, 3, 4, 5].map((s) => <StarIcon key={s} filled={s <= rev.rating} size={15} />)}
-                      </div>
-                      
-                      {(isAdmin || rev.userId === user?.uid) && (
-                        <button type="button" onClick={() => handleDelete(rev.id)} className="delete-btn" title="Eliminar">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                        </button>
-                      )}
-                    </div>
-
-                    {rev.comment && <p style={{ fontSize: "0.92rem", marginBottom: "1rem", lineHeight: 1.5 }}>{rev.comment}</p>}
-
-                    {(rev.favoriteTracks?.length > 0 || rev.favoriteAlbum) && (
-                      <div style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: "10px", padding: "0.85rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.85rem", marginBottom: "1rem" }}>
-                        <div>
-                          <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Top 3 Canciones</strong>
-                          {rev.favoriteTracks?.length ? rev.favoriteTracks.map((t, i) => (
-                            <div key={i} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "0.2rem" }}>
-                              {t.url ? (
-                                <a href={t.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-main)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem" }} onMouseOver={(e) => e.currentTarget.style.color = "var(--accent-green)"} onMouseOut={(e) => e.currentTarget.style.color = "var(--text-main)"}>
-                                  <span>{i + 1}. {t.name}</span>
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, flexShrink: 0 }}><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" /></svg>
-                                </a>
-                              ) : <span>{i + 1}. {t.name}</span>}
-                            </div>
-                          )) : <span style={{ color: "var(--text-muted)" }}>Ninguna</span>}
-                        </div>
-                        <div>
-                          <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Álbum Favorito</strong>
-                          {rev.favoriteAlbum ? (
-                            rev.favoriteAlbum.url ? (
-                              <a href={rev.favoriteAlbum.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-main)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }} onMouseOver={(e) => e.currentTarget.style.color = "var(--accent-green)"} onMouseOut={(e) => e.currentTarget.style.color = "var(--text-main)"}>
-                                <span>{rev.favoriteAlbum.name}</span>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.8, flexShrink: 0 }}><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" /></svg>
-                              </a>
-                            ) : <div>{rev.favoriteAlbum.name}</div>
-                          ) : <span style={{ color: "var(--text-muted)" }}>Ninguno</span>}
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", borderTop: "1px solid var(--border)", paddingTop: "0.75rem", position: "relative" }}>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
-                        {Object.entries(reactions).map(([emoji, usersArray]) => {
-                          const hasReacted = usersArray.includes(user?.uid);
-
-                          // Convertimos los UIDs a nombres de usuario para el atributo Title (Hover)
-                          const reactorsNames = usersArray.map(uid => usersData[uid]?.username || "Usuario").join(", ");
-
-                          return (
-                            <button
-                              key={emoji}
-                              type="button"
-                              title={reactorsNames} // Magia aquí: Pones el cursor y sale la lista
-                              onClick={() => handleReaction(rev.id, { emoji }, reactions)}
-                              style={{
-                                background: hasReacted ? "var(--bg-elevated)" : "var(--bg-main)",
-                                border: `1px solid ${hasReacted ? "var(--accent-blue)" : "var(--border)"}`,
-                                borderRadius: "20px",
-                                padding: "0.2rem 0.6rem",
-                                fontSize: "0.82rem",
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "0.3rem",
-                                color: "var(--text-main)"
-                              }}
-                            >
-                              <span>{emoji}</span>
-                              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>{usersArray.length}</span>
-                            </button>
-                          );
-                        })}
-
-                        <div style={{ position: "relative", display: "inline-block" }}>
-                          <button
-                            type="button"
-                            onClick={() => setEmojiPickerReviewId(isPickingEmoji ? null : rev.id)}
-                            title="Agregar emoji"
-                            style={{
-                              background: "var(--bg-main)",
-                              border: "1px dashed var(--border)",
-                              borderRadius: "20px",
-                              padding: "0.2rem 0.65rem",
-                              fontSize: "0.8rem",
-                              cursor: "pointer",
-                              color: "var(--text-muted)"
-                            }}
-                          >
-                            + 😊
-                          </button>
-
-                          {isPickingEmoji && (
-                            <div style={{
-                              position: "absolute",
-                              bottom: "125%",
-                              left: 0,
-                              zIndex: 50,
-                              boxShadow: "0 10px 25px rgba(0,0,0,0.6)",
-                              borderRadius: "12px"
-                            }}>
-                              <EmojiPicker
-                                theme="dark"
-                                onEmojiClick={(emojiData) => handleReaction(rev.id, emojiData, reactions)}
-                                width={300}
-                                height={380}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveCommentReviewId(isReplying ? null : rev.id)}
-                        style={{ background: "none", border: "none", color: "var(--accent-blue)", fontSize: "0.85rem", cursor: "pointer", fontWeight: 600 }}
-                      >
-                        {commentsList.length > 0 ? `Comentarios (${commentsList.length})` : "Comentar"}
-                      </button>
-                    </div>
-
-                    {isReplying && (
-                      <div style={{ marginTop: "1rem", borderTop: "1px dashed var(--border)", paddingTop: "1rem" }}>
-                        {commentsList.length > 0 && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1rem" }}>
-                            {commentsList.map((c) => {
-                              const commentProfile = usersData[c.userId];
-                              const commentName = commentProfile?.username || c.userName;
-                              const commentPhoto = commentProfile?.photoURL || null;
-
-                              return (
-                                <div key={c.id} style={{ background: "var(--bg-main)", padding: "0.6rem 0.85rem", borderRadius: "8px", fontSize: "0.85rem", position: "relative" }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem", alignItems: "center" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                      {commentPhoto ? (
-                                        <img
-                                          src={commentPhoto} // o commentPhoto en los comentarios
-                                          alt=""
-                                          style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }}
-                                          onError={(e) => {
-                                            e.target.onerror = null;
-                                            e.target.src = `https://ui-avatars.com/api/?name=${commentName}&background=1c1c21&color=fafafa`;
-                                          }}
-                                        />
-                                      ) : (
-                                        <div style={{ width: "22px", height: "22px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>👽</div>
-                                      )}
-                                      <strong style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{commentName}</strong>
-                                    </div>
-
-                                    {(isAdmin || c.userId === user?.uid) && (
-                                      <button type="button" onClick={() => handleDeleteComment(rev.id, commentsList, c.id)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "0.75rem" }}>Eliminar</button>
-                                    )}
-                                  </div>
-                                  <p style={{ margin: 0, color: "var(--text-main)" }}>{c.text}</p>
-                                </div>
-                              );
-                            })}
+                  return (
+                    <motion.article layout variants={cardVariants} exit={{ opacity: 0, scale: 0.95 }} key={rev.id} className="review-card" style={{ position: "relative" }}>
+                      <div className="review-header">
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <Link to={`/user/${rev.userId}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
+                            {authorPhoto ? <img src={authorPhoto} alt="" style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${authorName}&background=1c1c21&color=fafafa`; }} /> : <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", fontSize: "0.9rem" }}>👽</div>}
+                            <span style={{ fontWeight: 600, transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "var(--accent-blue)"} onMouseOut={(e) => e.target.style.color = "var(--text-main)"}>{authorName}</span>
+                          </Link>
+                          <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
+                            {[1, 2, 3, 4, 5].map((s) => <StarIcon key={s} filled={s <= rev.rating} size={15} />)}
                           </div>
-                        )}
-
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <input
-                            type="text"
-                            className="input-field"
-                            placeholder="Escribe una respuesta..."
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                            style={{ flex: 1, fontSize: "0.85rem", padding: "0.5rem 0.75rem" }}
-                            onKeyDown={(e) => { if (e.key === "Enter") handleAddComment(rev.id, commentsList); }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAddComment(rev.id, commentsList)}
-                            className="btn"
-                            style={{ backgroundColor: "var(--accent-blue)", color: "#fff", padding: "0.5rem 1rem", fontSize: "0.85rem" }}
-                          >
-                            Enviar
-                          </button>
                         </div>
+                        {(isAdmin || rev.userId === user?.uid) && (
+                          <button type="button" onClick={() => handleDelete(rev.id)} className="delete-btn" title="Eliminar">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                          </button>
+                        )}
                       </div>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
+
+                      {rev.comment && <p style={{ fontSize: "0.92rem", marginBottom: "1rem", lineHeight: 1.5 }}>{rev.comment}</p>}
+
+                      {(rev.favoriteTracks?.length > 0 || rev.favoriteAlbum) && (
+                        <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "0.85rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.85rem", marginBottom: "1rem" }}>
+                          <div>
+                            <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Top 3 Canciones</strong>
+                            {rev.favoriteTracks?.length ? rev.favoriteTracks.map((t, i) => (
+                              <div key={i} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: "0.2rem" }}>
+                                {t.url ? <a href={t.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-main)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem" }} onMouseOver={(e) => e.currentTarget.style.color = "var(--accent-green)"} onMouseOut={(e) => e.currentTarget.style.color = "var(--text-main)"}><span>{i + 1}. {t.name}</span></a> : <span>{i + 1}. {t.name}</span>}
+                              </div>
+                            )) : <span style={{ color: "var(--text-muted)" }}>Ninguna</span>}
+                          </div>
+                          <div>
+                            <strong style={{ display: "block", color: "var(--text-muted)", marginBottom: "0.3rem", fontSize: "0.75rem", textTransform: "uppercase" }}>Álbum Favorito</strong>
+                            {rev.favoriteAlbum ? (rev.favoriteAlbum.url ? <a href={rev.favoriteAlbum.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-main)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.35rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }} onMouseOver={(e) => e.currentTarget.style.color = "var(--accent-green)"} onMouseOut={(e) => e.currentTarget.style.color = "var(--text-main)"}><span>{rev.favoriteAlbum.name}</span></a> : <div>{rev.favoriteAlbum.name}</div>) : <span style={{ color: "var(--text-muted)" }}>Ninguno</span>}
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", borderTop: "1px solid var(--border)", paddingTop: "0.75rem", position: "relative" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
+                          {Object.entries(reactions).map(([emoji, usersArray]) => {
+                            const hasReacted = usersArray.includes(user?.uid);
+                            const reactorsNames = usersArray.map(uid => usersData[uid]?.username || "Usuario").join(", ");
+                            return (
+                              <motion.button whileTap={{ scale: 0.85 }} key={emoji} type="button" title={reactorsNames} onClick={() => handleReaction(rev.id, { emoji }, reactions)} style={{ background: hasReacted ? "var(--bg-elevated)" : "var(--bg-main)", border: `1px solid ${hasReacted ? "var(--accent-blue)" : "var(--border)"}`, borderRadius: "20px", padding: "0.2rem 0.6rem", fontSize: "0.82rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem", color: "var(--text-main)" }}>
+                                <span>{emoji}</span><span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>{usersArray.length}</span>
+                              </motion.button>
+                            );
+                          })}
+
+                          <div style={{ position: "relative", display: "inline-block" }}>
+                            <motion.button whileTap={{ scale: 0.9 }} type="button" onClick={() => setEmojiPickerReviewId(isPickingEmoji ? null : rev.id)} title="Agregar emoji" style={{ background: "var(--bg-main)", border: "1px dashed var(--border)", borderRadius: "20px", padding: "0.2rem 0.65rem", fontSize: "0.8rem", cursor: "pointer", color: "var(--text-muted)" }}>+ 😊</motion.button>
+                            <AnimatePresence>
+                              {isPickingEmoji && (
+                                <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} style={{ position: "absolute", bottom: "125%", left: 0, zIndex: 50, boxShadow: "0 10px 25px rgba(0,0,0,0.6)", borderRadius: "12px" }}>
+                                  <EmojiPicker theme="dark" onEmojiClick={(emojiData) => handleReaction(rev.id, emojiData, reactions)} width={300} height={380} />
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+
+                        <button type="button" onClick={() => setActiveCommentReviewId(isReplying ? null : rev.id)} style={{ background: "none", border: "none", color: "var(--accent-blue)", fontSize: "0.85rem", cursor: "pointer", fontWeight: 600 }}>
+                          {commentsList.length > 0 ? `Comentarios (${commentsList.length})` : "Comentar"}
+                        </button>
+                      </div>
+
+                      {/* EXPANSIÓN FLUIDA DE COMENTARIOS */}
+                      <AnimatePresence>
+                        {isReplying && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
+                            <div style={{ marginTop: "1rem", borderTop: "1px dashed var(--border)", paddingTop: "1rem" }}>
+                              {commentsList.length > 0 && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1rem" }}>
+                                  {commentsList.map((c) => {
+                                    const commentProfile = usersData[c.userId];
+                                    const commentName = commentProfile?.username || c.userName;
+                                    const commentPhoto = commentProfile?.photoURL || null;
+                                    return (
+                                      <div key={c.id} style={{ background: "var(--bg-main)", padding: "0.6rem 0.85rem", borderRadius: "8px", fontSize: "0.85rem", position: "relative" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem", alignItems: "center" }}>
+                                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                            {commentPhoto ? <img src={commentPhoto} alt="" style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: "22px", height: "22px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>👽</div>}
+                                            <strong style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{commentName}</strong>
+                                          </div>
+                                          {(isAdmin || c.userId === user?.uid) && (
+                                            <button type="button" onClick={() => handleDeleteComment(rev.id, commentsList, c.id)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "0.75rem" }}>Eliminar</button>
+                                          )}
+                                        </div>
+                                        <p style={{ margin: 0, color: "var(--text-main)" }}>{c.text}</p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              <div style={{ display: "flex", gap: "0.5rem" }}>
+                                <input type="text" className="input-field" placeholder="Escribe una respuesta..." value={replyText} onChange={(e) => setReplyText(e.target.value)} style={{ flex: 1, fontSize: "0.85rem", padding: "0.5rem 0.75rem" }} onKeyDown={(e) => { if (e.key === "Enter") handleAddComment(rev.id, commentsList); }} />
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} type="button" onClick={() => handleAddComment(rev.id, commentsList)} className="btn" style={{ backgroundColor: "var(--accent-blue)", color: "#fff", padding: "0.5rem 1rem", fontSize: "0.85rem" }}>Enviar</motion.button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.article>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
           </section>
         </>
       )}
-    </main>
+    </motion.main>
   );
 };
