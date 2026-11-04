@@ -15,12 +15,13 @@ async function getSpotifyToken() {
 }
 
 export default async function handler(req, res) {
-  const { artist, searchTrack, searchAlbum } = req.query;
+  // 1. Extraer TODOS los parámetros válidos de la consulta
+  const { artist, searchTrack, searchAlbum, searchArtist } = req.query;
 
   try {
     const token = await getSpotifyToken();
 
-    // 1. Búsqueda de canciones
+    // Búsqueda de canciones
     if (searchTrack) {
       const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchTrack)}&type=track&limit=5`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
       return res.status(200).json(tracks);
     }
 
-    // 2. Búsqueda de álbumes
+    // Búsqueda de álbumes
     if (searchAlbum) {
       const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchAlbum)}&type=album&limit=5`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -59,7 +60,8 @@ export default async function handler(req, res) {
       }));
       return res.status(200).json(albums);
     }
-    
+
+    // Búsqueda de artistas para el autocompletado en Listas
     if (searchArtist) {
       const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchArtist)}&type=artist&limit=5`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -78,7 +80,8 @@ export default async function handler(req, res) {
       }));
       return res.status(200).json(artists);
     }
-    // 3. Búsqueda de artista
+
+    // Búsqueda de artista exacto (Ruleta / Artista de la Semana)
     if (!artist) {
       return res.status(400).json({ error: 'Falta el parámetro de búsqueda' });
     }
