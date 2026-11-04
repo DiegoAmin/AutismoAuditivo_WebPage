@@ -542,8 +542,3 @@ h1, h2, .page-title, .artist-hero-name, .brand-text {
   box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
   font-weight: 700;
 }
-
-@keyframes pulse {
-  0% { transform: scale(1); filter: brightness(1); }
-  100% { transform: scale(1.05); filter: brightness(1.2); }
-}
