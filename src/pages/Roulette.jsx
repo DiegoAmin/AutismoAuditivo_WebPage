@@ -296,10 +296,9 @@ export const Roulette = () => {
               fontWeight: 800,
               backgroundColor: spinCount === 2 ? "var(--accent-red)" : "var(--accent-green)",
               color: "#0000000",
-              opacity: !isAdmin ? 0.45 : 1,
               cursor: !isAdmin ? "not-allowed" : "pointer",
               borderRadius: "999px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
+              boxShadow: "0 8px 24px rgba(0,0,0,0.5)"
             }}
           >
             {isSpinning
