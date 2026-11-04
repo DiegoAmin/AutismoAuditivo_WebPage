@@ -1,8 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Mapeo manual para corregir artistas con nombres combinados o notas
+const NAME_OVERRIDES = {
+  "Soda Stereo/ Cerati": "Soda Stereo",
+  "The Police / Sting": "The Police",
+  "Clipse/Pusha T": "Clipse",
+  "The Cure (El otro 50%)": "The Cure",
+  "Strokes": "The Strokes",
+  "Beatles": "The Beatles",
+  "Willie colon": "Willie Colón"
+};
+
+const getSearchableName = (rawName) => {
+  if (!rawName) return "";
+  if (NAME_OVERRIDES[rawName]) return NAME_OVERRIDES[rawName];
+  // Elimina notas entre paréntesis: "The Cure (El otro 50%)" -> "The Cure"
+  let clean = rawName.replace(/\s*\([^)]*\)/g, "");
+  // Si contiene diagonales, toma el primer artista principal
+  if (clean.includes("/")) clean = clean.split("/")[0].trim();
+  return clean.trim();
+};
 
 export const Lists = () => {
   const { user, isAdmin } = useAuth();
@@ -16,7 +37,11 @@ export const Lists = () => {
   const [selectedArtist, setSelectedArtist] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Lectura en tiempo real de la colección raíz 'artists'
+  // Estados del asistente de migración
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationLog, setMigrationLog] = useState("");
+
+  // Suscripción en tiempo real a la colección de artistas
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "artists"), (snapshot) => {
       const artistData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -25,7 +50,7 @@ export const Lists = () => {
     return () => unsubscribe();
   }, []);
 
-  // Autocompletado de Spotify al escribir
+  // Autocompletado de Spotify con debounce
   useEffect(() => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
       setSearchResults([]);
@@ -71,7 +96,8 @@ export const Lists = () => {
         status: finalStatus,
         addedBy: user.displayName || user.uid,
         spotifyImage: selectedArtist?.image || null,
-        spotifyUrl: selectedArtist?.url || null
+        spotifyUrl: selectedArtist?.url || null,
+        spotifyId: selectedArtist?.id || null
       });
       setSelectedArtist(null);
       setSearchQuery("");
@@ -85,8 +111,7 @@ export const Lists = () => {
 
   const handleDeleteArtist = async (id, name) => {
     if (!isAdmin) return;
-    if (!window.confirm(`¿Eliminar a "${name}" de la base de datos?`)) return;
-
+    if (!window.confirm(`¿Eliminar a "${name}" de la base de datos?`));
     try {
       await deleteDoc(doc(db, "artists", id));
     } catch (error) {
@@ -94,9 +119,65 @@ export const Lists = () => {
     }
   };
 
+  // Función de migración masiva por lotes
+  const handleMigrateAllArtists = async () => {
+    if (!isAdmin) return;
+
+    const unmigrated = artists.filter(a => !a.spotifyImage);
+    if (unmigrated.length === 0) {
+      alert("¡Todos los artistas ya tienen imagen y datos de Spotify!");
+      return;
+    }
+
+    const confirm = window.confirm(
+      `Se encontraron ${unmigrated.length} artistas sin datos de Spotify. ¿Deseas iniciar la migración automática?`
+    );
+    if (!confirm) return;
+
+    setIsMigrating(true);
+    let updatedCount = 0;
+    let failedCount = 0;
+
+    for (let i = 0; i < unmigrated.length; i++) {
+      const artistDoc = unmigrated[i];
+      const searchTerm = getSearchableName(artistDoc.name);
+
+      setMigrationLog(`[${i + 1}/${unmigrated.length}] Buscando: ${searchTerm}...`);
+
+      try {
+        const res = await fetch(`/api/spotify?searchArtist=${encodeURIComponent(searchTerm)}`);
+        const data = await res.json();
+
+        if (Array.isArray(data) && data.length > 0) {
+          const match = data[0];
+          await updateDoc(doc(db, "artists", artistDoc.id), {
+            spotifyId: match.id || null,
+            spotifyImage: match.image || null,
+            spotifyUrl: match.url || null
+          });
+          updatedCount++;
+        } else {
+          console.warn(`Sin resultados para: ${searchTerm}`);
+          failedCount++;
+        }
+      } catch (err) {
+        console.error(`Error en migración de ${searchTerm}:`, err);
+        failedCount++;
+      }
+
+      // Pausa de 300 ms para no saturar la cuota de la API
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    setIsMigrating(false);
+    setMigrationLog("");
+    alert(`Migración completada:\n✅ Actualizados: ${updatedCount}\n⚠️ No encontrados: ${failedCount}`);
+  };
+
   const columns = [
     {
       title: "Lista Oficial",
+      icon: "🛡️",
       items: oficialList,
       maxLimit: 70,
       adminOnly: true,
@@ -104,12 +185,14 @@ export const Lists = () => {
     },
     {
       title: "Sugerencias",
+      icon: "💡",
       items: sugerenciaList,
       adminOnly: false,
       color: "var(--accent-amber)"
     },
     {
       title: "Historial",
+      icon: "📜",
       items: historialList,
       adminOnly: true,
       color: "var(--accent-green)",
@@ -127,7 +210,7 @@ export const Lists = () => {
       transition={{ duration: 0.3 }}
     >
       {/* CABECERA + TABS DE ÉPOCA */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "1rem", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "1rem", marginBottom: "1.5rem" }}>
         <div>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
             Archivo Central
@@ -143,7 +226,7 @@ export const Lists = () => {
               onClick={() => setActiveTab("actuales")}
               style={{ flex: 1 }}
             >
-              Actuales
+              ✨ Actuales
             </button>
             <button
               type="button"
@@ -151,11 +234,39 @@ export const Lists = () => {
               onClick={() => setActiveTab("ogs")}
               style={{ flex: 1 }}
             >
-              OG's
+              🔥 OG's
             </button>
           </div>
         </div>
       </div>
+
+      {/* BOTÓN ASISTENTE DE MIGRACIÓN (SÓLO ADMIN) */}
+      {isAdmin && (
+        <div style={{ marginBottom: "1.75rem", display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={handleMigrateAllArtists}
+            disabled={isMigrating}
+            className="btn"
+            style={{
+              backgroundColor: isMigrating ? "var(--bg-elevated)" : "rgba(245, 158, 11, 0.12)",
+              border: "1px solid var(--accent-amber)",
+              color: "var(--accent-amber)",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              padding: "0.6rem 1.2rem",
+              borderRadius: "999px"
+            }}
+          >
+            {isMigrating ? `⏳ ${migrationLog}` : "⚡ Sincronizar fotos de artistas con Spotify"}
+          </button>
+          {!isMigrating && (
+            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+              ({artists.filter(a => !a.spotifyImage).length} pendientes de foto)
+            </span>
+          )}
+        </div>
+      )}
 
       {/* FORMULARIO DE AGREGAR */}
       <section className="card" style={{ marginBottom: "2.5rem", padding: "1.5rem 2rem" }}>
@@ -262,7 +373,7 @@ export const Lists = () => {
             </AnimatePresence>
           </div>
 
-          {/* SELECTOR DE DESTINO (STATUS) */}
+          {/* SELECTOR DE DESTINO */}
           <div style={{ flex: "1 1 220px" }}>
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>
               Destino
