@@ -52,7 +52,7 @@ export const PublicProfile = () => {
     return (
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
         gap: "1.25rem"
       }}>
         {items.map((item, idx) => {
