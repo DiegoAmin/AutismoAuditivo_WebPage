@@ -193,7 +193,7 @@ export const PublicProfile = () => {
         {/* PARRILLA DE CANCIONES */}
         <div style={{ marginBottom: "3.5rem" }}>
           <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            🎵 Top 5 Canciones
+            Top 5 Canciones
           </h3>
           {renderGrid(topTracks, "canciones", hoveredTrackIndex, setHoveredTrackIndex)}
         </div>
@@ -201,7 +201,7 @@ export const PublicProfile = () => {
         {/* PARRILLA DE ÁLBUMES */}
         <div>
           <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            💿 Top 5 Álbumes
+            Top 5 Álbumes
           </h3>
           {renderGrid(topAlbums, "álbumes", hoveredAlbumIndex, setHoveredAlbumIndex)}
         </div>
