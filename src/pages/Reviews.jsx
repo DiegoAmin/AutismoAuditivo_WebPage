@@ -14,6 +14,8 @@ export const Reviews = () => {
   const { user, isAdmin } = useAuth();
   const [currentArtist, setCurrentArtist] = useState(null);
   const [reviews, setReviews] = useState([]);
+  
+  const [usersData, setUsersData] = useState({});
 
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -42,7 +44,14 @@ export const Reviews = () => {
     const unsubReviews = onSnapshot(collection(db, "reviews"), (snapshot) => {
       setReviews(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    return () => { unsubArtist(); unsubReviews(); };
+    
+    const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+      const map = {};
+      snapshot.forEach(doc => { map[doc.id] = doc.data(); });
+      setUsersData(map);
+    });
+
+    return () => { unsubArtist(); unsubReviews(); unsubUsers(); };
   }, [user]);
 
   const artistReviews = reviews
@@ -299,11 +308,21 @@ export const Reviews = () => {
                 const isReplying = activeCommentReviewId === rev.id;
                 const isPickingEmoji = emojiPickerReviewId === rev.id;
 
+                const authorProfile = usersData[rev.userId];
+                const authorName = authorProfile?.username || rev.userName;
+                const authorPhoto = authorProfile?.photoURL || null;
+
                 return (
                   <article key={rev.id} className="review-card" style={{ position: "relative" }}>
                     <div className="review-header">
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                        <span style={{ fontWeight: 600 }}>{rev.userName}</span>
+                        {authorPhoto ? (
+                          <img src={authorPhoto} alt="" style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                        ) : (
+                          <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", fontSize: "0.9rem" }}>👽</div>
+                        )}
+                        <span style={{ fontWeight: 600 }}>{authorName}</span>
+                        
                         <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
                           {[1, 2, 3, 4, 5].map((s) => <StarIcon key={s} filled={s <= rev.rating} size={15} />)}
                         </div>
@@ -350,10 +369,15 @@ export const Reviews = () => {
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
                         {Object.entries(reactions).map(([emoji, usersArray]) => {
                           const hasReacted = usersArray.includes(user?.uid);
+                          
+                          // Convertimos los UIDs a nombres de usuario para el atributo Title (Hover)
+                          const reactorsNames = usersArray.map(uid => usersData[uid]?.username || "Usuario").join(", ");
+
                           return (
                             <button
                               key={emoji}
                               type="button"
+                              title={reactorsNames} // Magia aquí: Pones el cursor y sale la lista
                               onClick={() => handleReaction(rev.id, { emoji }, reactions)}
                               style={{
                                 background: hasReacted ? "var(--bg-elevated)" : "var(--bg-main)",
@@ -374,7 +398,6 @@ export const Reviews = () => {
                           );
                         })}
 
-                        {/* Botón y Selector Masivo con emoji-picker-react */}
                         <div style={{ position: "relative", display: "inline-block" }}>
                           <button
                             type="button"
@@ -393,7 +416,6 @@ export const Reviews = () => {
                             + 😊
                           </button>
 
-                          {/* Popover con el buscador de todos los emojis del mundo */}
                           {isPickingEmoji && (
                             <div style={{
                               position: "absolute",
@@ -427,17 +449,31 @@ export const Reviews = () => {
                       <div style={{ marginTop: "1rem", borderTop: "1px dashed var(--border)", paddingTop: "1rem" }}>
                         {commentsList.length > 0 && (
                           <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1rem" }}>
-                            {commentsList.map((c) => (
-                              <div key={c.id} style={{ background: "var(--bg-main)", padding: "0.6rem 0.85rem", borderRadius: "8px", fontSize: "0.85rem", position: "relative" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
-                                  <strong style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{c.userName}</strong>
-                                  {(isAdmin || c.userId === user?.uid) && (
-                                    <button type="button" onClick={() => handleDeleteComment(rev.id, commentsList, c.id)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "0.75rem" }}>Eliminar</button>
-                                  )}
+                            {commentsList.map((c) => {
+                              const commentProfile = usersData[c.userId];
+                              const commentName = commentProfile?.username || c.userName;
+                              const commentPhoto = commentProfile?.photoURL || null;
+
+                              return (
+                                <div key={c.id} style={{ background: "var(--bg-main)", padding: "0.6rem 0.85rem", borderRadius: "8px", fontSize: "0.85rem", position: "relative" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem", alignItems: "center" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                      {commentPhoto ? (
+                                        <img src={commentPhoto} alt="" style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover" }} />
+                                      ) : (
+                                        <div style={{ width: "22px", height: "22px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>👽</div>
+                                      )}
+                                      <strong style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{commentName}</strong>
+                                    </div>
+                                    
+                                    {(isAdmin || c.userId === user?.uid) && (
+                                      <button type="button" onClick={() => handleDeleteComment(rev.id, commentsList, c.id)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "0.75rem" }}>Eliminar</button>
+                                    )}
+                                  </div>
+                                  <p style={{ margin: 0, color: "var(--text-main)" }}>{c.text}</p>
                                 </div>
-                                <p style={{ margin: 0, color: "var(--text-main)" }}>{c.text}</p>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
 

@@ -5,12 +5,12 @@ import { useAuth } from "../context/AuthContext.jsx";
 import EmojiPicker from "emoji-picker-react";
 
 const VIBE_TAGS = [
-  { id: "obra_maestra", label: "🤯 Obra maestra", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
-  { id: "deep_vibes", label: "🚬 Deep vibes", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.15)" },
-  { id: "energia", label: "⚡ Energía pura", color: "#ef4444", bg: "rgba(239, 68, 68, 0.15)" },
-  { id: "chill", label: "🌊 Chill / Flotar", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.15)" },
-  { id: "joya_oculta", label: "💎 Joya oculta", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" },
-  { id: "en_loop", label: "🔁 En loop", color: "#ec4899", bg: "rgba(236, 72, 153, 0.15)" }
+  { id: "obra_maestra", label: "Obra maestra", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
+  { id: "deep_vibes", label: "Deep vibes", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.15)" },
+  { id: "energia", label: "Energía pura", color: "#ef4444", bg: "rgba(239, 68, 68, 0.15)" },
+  { id: "chill", label: "Chill / Flotar", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.15)" },
+  { id: "joya_oculta", label: "Joya oculta", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" },
+  { id: "en_loop", label: "En loop", color: "#ec4899", bg: "rgba(236, 72, 153, 0.15)" }
 ];
 
 export const Recommendations = () => {
@@ -100,7 +100,7 @@ export const Recommendations = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("¿Quitar este Banger del muro?")) return;
+    if (!window.confirm("¿Quitar esta joyita del muro?")) return;
     try {
       await deleteDoc(doc(db, "recommendations", id));
     } catch (error) {
@@ -140,7 +140,7 @@ export const Recommendations = () => {
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
           Comunidad Libre
         </p>
-        <h1 className="page-title" style={{ marginBottom: "0.25rem" }}>Muro de Bangers</h1>
+        <h1 className="page-title" style={{ marginBottom: "0.25rem" }}>Muro de Joyitas</h1>
         <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
           Recomienda un álbum o una rola que traigas clavada en la cabeza.
         </p>
@@ -335,7 +335,7 @@ export const Recommendations = () => {
       {/* PARRILLA DE VINILOS (GRID) */}
       {filteredRecs.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: "3.5rem" }}>
-          <p style={{ color: "var(--text-muted)" }}>Aún no hay recomendaciones en esta categoría. ¡Sé el primero en soltar un Banger!</p>
+          <p style={{ color: "var(--text-muted)" }}>Aún no hay recomendaciones en esta categoría. ¡Sé el primero en soltar una joyita!</p>
         </div>
       ) : (
         <div style={{
@@ -505,14 +505,19 @@ export const Recommendations = () => {
                     )}
                   </div>
 
-                  {/* Barra de reacciones rápidas */}
+                  {/* Barra de reacciones rápidas con Tooltip (Magia inyectada aquí) */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", alignItems: "center", position: "relative" }}>
                     {Object.entries(reactions).map(([emoji, usersArray]) => {
                       const hasReacted = usersArray.includes(user?.uid);
+                      
+                      // Convertimos los UIDs a nombres de usuario para el Tooltip
+                      const reactorsNames = usersArray.map(uid => usersData[uid]?.username || "Usuario").join(", ");
+
                       return (
                         <button
                           key={emoji}
                           type="button"
+                          title={reactorsNames} // <- La magia está aquí
                           onClick={() => handleReaction(rec.id, { emoji }, reactions)}
                           style={{
                             background: hasReacted ? "var(--bg-elevated)" : "var(--bg-main)",
