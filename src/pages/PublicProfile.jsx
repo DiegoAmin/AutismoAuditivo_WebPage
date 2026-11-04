@@ -206,6 +206,7 @@ export const PublicProfile = () => {
           {renderGrid(topAlbums, "álbumes", hoveredAlbumIndex, setHoveredAlbumIndex)}
         </div>
       </section>
+      
     </main>
   );
 };
