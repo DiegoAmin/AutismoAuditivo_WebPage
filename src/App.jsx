@@ -112,9 +112,9 @@ const Navigation = () => {
             />
             <span className="profile-pill-name">{user.displayName || "Perfil"}</span>
           </NavLink>
-          <button onClick={toggleTheme} className="logout-icon-btn" style={{ color: "var(--text-main)", border: "1px solid var(--border)", background: "transparent" }}>
+          {/*<button onClick={toggleTheme} className="logout-icon-btn" style={{ color: "var(--text-main)", border: "1px solid var(--border)", background: "transparent" }}>
             {isDarkMode ? "☀️" : "🌙"}
-          </button>
+          </button>*/}
           <button onClick={logout} className="logout-icon-btn" title="Cerrar sesión">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
