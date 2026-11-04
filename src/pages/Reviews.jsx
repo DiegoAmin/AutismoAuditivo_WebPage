@@ -317,7 +317,15 @@ export const Reviews = () => {
                     <div className="review-header">
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                         {authorPhoto ? (
-                          <img src={authorPhoto} alt="" style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                          <img 
+  src={authorPhoto} // o commentPhoto en los comentarios
+  alt="" 
+  style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} 
+  onError={(e) => {
+    e.target.onerror = null; 
+    e.target.src = `https://ui-avatars.com/api/?name=${authorName}&background=1c1c21&color=fafafa`;
+  }}
+/>
                         ) : (
                           <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", fontSize: "0.9rem" }}>👽</div>
                         )}
@@ -459,7 +467,15 @@ export const Reviews = () => {
                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem", alignItems: "center" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                       {commentPhoto ? (
-                                        <img src={commentPhoto} alt="" style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover" }} />
+                                        <img 
+  src={commentPhoto} // o commentPhoto en los comentarios
+  alt="" 
+  style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} 
+  onError={(e) => {
+    e.target.onerror = null; 
+    e.target.src = `https://ui-avatars.com/api/?name=${commentName}&background=1c1c21&color=fafafa`;
+  }}
+/>
                                       ) : (
                                         <div style={{ width: "22px", height: "22px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>👽</div>
                                       )}
