@@ -97,7 +97,6 @@ export const Lists = () => {
   const columns = [
     {
       title: "Lista Oficial",
-      icon: "🛡️",
       items: oficialList,
       maxLimit: 70,
       adminOnly: true,
@@ -105,14 +104,12 @@ export const Lists = () => {
     },
     {
       title: "Sugerencias",
-      icon: "💡",
       items: sugerenciaList,
       adminOnly: false,
       color: "var(--accent-amber)"
     },
     {
       title: "Historial",
-      icon: "📜",
       items: historialList,
       adminOnly: true,
       color: "var(--accent-green)",
@@ -146,7 +143,7 @@ export const Lists = () => {
               onClick={() => setActiveTab("actuales")}
               style={{ flex: 1 }}
             >
-              ✨ Actuales
+              Actuales
             </button>
             <button
               type="button"
@@ -154,7 +151,7 @@ export const Lists = () => {
               onClick={() => setActiveTab("ogs")}
               style={{ flex: 1 }}
             >
-              🔥 OG's
+              OG's
             </button>
           </div>
         </div>
