@@ -3,6 +3,7 @@ import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import EmojiPicker from "emoji-picker-react";
+import { Link } from "react-router-dom";
 
 const VIBE_TAGS = [
   { id: "obra_maestra", label: "Obra maestra", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
@@ -488,23 +489,21 @@ export const Recommendations = () => {
                   </div>
 
                   {/* Autor + Borrar */}
+                
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.5rem", borderTop: "1px solid var(--border)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                    
+                    {/* Aquí empieza el Link clickeable */}
+                    <Link to={`/user/${rec.userId}`} style={{ display: "flex", alignItems: "center", gap: "0.45rem", textDecoration: "none", color: "inherit" }}>
                       {authorPhoto ? (
-                        <img
-                          src={authorPhoto}
-                          alt=""
-                          style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover" }}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = `https://ui-avatars.com/api/?name=${authorName}&background=1c1c21&color=fafafa`;
-                          }}
-                        />
+                        <img src={authorPhoto} alt="" style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover" }} onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${authorName}&background=1c1c21&color=fafafa`; }} />
                       ) : (
                         <div style={{ width: "22px", height: "22px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem" }}>👽</div>
                       )}
-                      <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600 }}>{authorName}</span>
-                    </div>
+                      {/* Agregué el hover para que el nombre resalte al pasar el cursor */}
+                      <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600, transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "var(--accent-blue)"} onMouseOut={(e) => e.target.style.color = "var(--text-muted)"}>
+                        {authorName}
+                      </span>
+                    </Link>
 
                     {(isAdmin || rec.userId === user?.uid) && (
                       <button type="button" onClick={() => handleDelete(rec.id)} className="delete-btn" title="Eliminar">

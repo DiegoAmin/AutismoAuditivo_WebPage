@@ -3,6 +3,7 @@ import { doc, onSnapshot, collection, setDoc, deleteDoc, updateDoc } from "fireb
 import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import EmojiPicker from "emoji-picker-react";
+import { Link } from "react-router-dom";
 
 const StarIcon = ({ filled, size = 22 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -315,26 +316,23 @@ export const Reviews = () => {
                 return (
                   <article key={rev.id} className="review-card" style={{ position: "relative" }}>
                     <div className="review-header">
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      {/* Aquí empieza el Link clickeable */}
+                      <Link to={`/user/${rev.userId}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
                         {authorPhoto ? (
-                          <img
-                            src={authorPhoto} // o commentPhoto en los comentarios
-                            alt=""
-                            style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = `https://ui-avatars.com/api/?name=${authorName}&background=1c1c21&color=fafafa`;
-                            }}
-                          />
+                          <img src={authorPhoto} alt="" style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${authorName}&background=1c1c21&color=fafafa`; }} />
                         ) : (
                           <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", fontSize: "0.9rem" }}>👽</div>
                         )}
-                        <span style={{ fontWeight: 600 }}>{authorName}</span>
-
-                        <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
-                          {[1, 2, 3, 4, 5].map((s) => <StarIcon key={s} filled={s <= rev.rating} size={15} />)}
-                        </div>
+                        {/* Agregué un hover de color azul al nombre para que se note que es clickeable */}
+                        <span style={{ fontWeight: 600, transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "var(--accent-blue)"} onMouseOut={(e) => e.target.style.color = "var(--text-main)"}>
+                          {authorName}
+                        </span>
+                      </Link>
+                      
+                      <div style={{ display: "inline-flex", gap: "0.15rem", color: "var(--accent-amber)" }}>
+                        {[1, 2, 3, 4, 5].map((s) => <StarIcon key={s} filled={s <= rev.rating} size={15} />)}
                       </div>
+                      
                       {(isAdmin || rev.userId === user?.uid) && (
                         <button type="button" onClick={() => handleDelete(rev.id)} className="delete-btn" title="Eliminar">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
