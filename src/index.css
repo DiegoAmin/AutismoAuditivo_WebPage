@@ -28,18 +28,30 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  /* Quita el recuadro gris feo al tocar cualquier botón o tarjeta en celular */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-body {
+html, body {
   background-color: var(--bg-main);
   background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 185, 84, 0.12), transparent);
   color: var(--text-main);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  /* Evita que la pantalla rebote como liga o haga pull-to-refresh no deseado */
+  overscroll-behavior-y: none;
+  -webkit-touch-callout: none;
 }
 
 h1, h2, .page-title, .artist-hero-name, .brand-text {
   font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Evita seleccionar texto al mantener presionado botones y barras */
+button, .segmented-control, .bottom-nav {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* --- TOPBAR --- */
@@ -54,6 +66,8 @@ h1, h2, .page-title, .artist-hero-name, .brand-text {
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
+  /* Ajuste para el notch en dispositivos de Apple con PWA (si se usa padding extra) */
+  padding-top: max(0.75rem, env(safe-area-inset-top)); 
   z-index: 50;
 }
 
@@ -338,7 +352,8 @@ h1, h2, .page-title, .artist-hero-name, .brand-text {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--border);
-    padding: 0.45rem 0.25rem calc(0.45rem + env(safe-area-inset-bottom));
+    /* Soporte para el notch inferior de iPhone / gestos de Android en la barra de navegación */
+    padding: 0.45rem 0.25rem max(0.6rem, env(safe-area-inset-bottom));
     z-index: 60;
   }
 
