@@ -4,54 +4,70 @@ import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FastAverageColor } from 'fast-average-color';
+import { FastAverageColor } from "fast-average-color";
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const [currentArtist, setCurrentArtist] = useState(null);
   const [userProgress, setUserProgress] = useState("por_escuchar");
-  const [groupProgress, setGroupProgress] = useState([]);
+  const [progressMap, setProgressMap] = useState({});
   const [usersData, setUsersData] = useState({});
-  const [glowColor, setGlowColor] = useState('rgba(29, 185, 84, 0.12)'); // Verde sutil por defecto
+  const [glowColor, setGlowColor] = useState("rgba(29, 185, 84, 0.12)");
 
+  // 1. Suscripciones en tiempo real a Firestore
   useEffect(() => {
     if (!user) return;
+
     const unsubArtist = onSnapshot(doc(db, "globals", "general"), (docSnap) => {
       if (docSnap.exists()) setCurrentArtist(docSnap.data());
     });
 
     const unsubProgress = onSnapshot(collection(db, "progress"), (snapshot) => {
-      const progressData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      const currentWeekProgress = progressData.filter(p => p.artistName === currentArtist?.name);
-      setGroupProgress(currentWeekProgress);
-      const myProgress = currentWeekProgress.find(p => p.id === user.uid);
-      setUserProgress(myProgress ? myProgress.status : "por_escuchar");
+      const pMap = {};
+      snapshot.docs.forEach((d) => {
+        pMap[d.id] = d.data();
+      });
+      setProgressMap(pMap);
     });
 
     const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
-      const map = {};
-      snapshot.forEach(doc => { map[doc.id] = doc.data(); });
-      setUsersData(map);
+      const uMap = {};
+      snapshot.forEach((d) => {
+        uMap[d.id] = d.data();
+      });
+      setUsersData(uMap);
     });
 
-    return () => { unsubArtist(); unsubProgress(); unsubUsers(); };
-  }, [user, currentArtist?.name]);
+    return () => {
+      unsubArtist();
+      unsubProgress();
+      unsubUsers();
+    };
+  }, [user]);
 
-  // Extracción del color dominante
+  // 2. Sincronizar el progreso personal del usuario activo
+  useEffect(() => {
+    if (!user || !currentArtist?.name) return;
+    const myDoc = progressMap[user.uid];
+    if (myDoc && myDoc.artistName === currentArtist.name) {
+      setUserProgress(myDoc.status);
+    } else {
+      setUserProgress("por_escuchar");
+    }
+  }, [progressMap, currentArtist?.name, user]);
+
+  // 3. Extracción de color dominante (FastAverageColor)
   useEffect(() => {
     if (currentArtist && currentArtist.spotifyImage) {
       const fac = new FastAverageColor();
       const img = new Image();
-      img.crossOrigin = 'Anonymous';
+      img.crossOrigin = "Anonymous";
       img.src = currentArtist.spotifyImage;
-      
+
       img.onload = () => {
         try {
           const color = fac.getColor(img);
-          // Modificamos directamente el fondo del body para que no haya cortes de caja
           document.body.style.backgroundImage = `radial-gradient(ellipse 90% 60% at 50% -10%, rgba(${color.value[0]}, ${color.value[1]}, ${color.value[2]}, 0.12), transparent)`;
-          
-          // Guardamos un color más fuerte solo para el resplandor detrás de la foto circular
           setGlowColor(`rgba(${color.value[0]}, ${color.value[1]}, ${color.value[2]}, 0.35)`);
           fac.destroy();
         } catch (e) {
@@ -60,7 +76,6 @@ export const Dashboard = () => {
       };
     }
 
-    // Limpiador: Cuando salgamos del Dashboard, regresamos el body a su estado neutral
     return () => {
       document.body.style.backgroundImage = "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 185, 84, 0.08), transparent)";
     };
@@ -70,14 +85,14 @@ export const Dashboard = () => {
     if (!user || !currentArtist?.name) return;
     try {
       await setDoc(doc(db, "progress", user.uid), {
-        displayName: user.displayName,
+        displayName: user.displayName || "Usuario",
         status: status,
         artistName: currentArtist.name,
         updatedAt: new Date()
       });
       setUserProgress(status);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error al actualizar progreso:", error);
     }
   };
 
@@ -89,7 +104,21 @@ export const Dashboard = () => {
     terminado: { label: "Completado", color: "var(--accent-green)", bg: "rgba(29, 185, 84, 0.12)" }
   };
 
-  // Variantes de animación para framer-motion
+  // 4. Mapeo del grupo: todos los registrados aparecen; si no han votado, caen en 'por_escuchar'
+  const allGroupMembers = Object.entries(usersData).map(([uid, uData]) => {
+    const pDoc = progressMap[uid];
+    const isCurrentWeek = pDoc && pDoc.artistName === currentArtist?.name;
+    const status = isCurrentWeek ? pDoc.status : "por_escuchar";
+
+    return {
+      id: uid,
+      displayName: uData.username || uData.displayName || "Usuario",
+      photoURL: uData.photoURL || null,
+      status: status
+    };
+  });
+
+  // Variantes de animación
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
@@ -104,13 +133,12 @@ export const Dashboard = () => {
   };
 
   return (
-    <motion.main 
+    <motion.main
       className="page-container"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      // Eliminamos el backgroundImage del style local
     >
       <motion.div variants={itemVariants} initial="hidden" animate="show" style={{ marginBottom: "1.75rem", textAlign: "left" }}>
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
@@ -127,47 +155,49 @@ export const Dashboard = () => {
         </motion.div>
       ) : (
         <motion.div variants={containerVariants} initial="hidden" animate="show">
-          
           {/* TARJETA DEL ARTISTA */}
           <motion.section variants={itemVariants} className="card" style={{ textAlign: "center", position: "relative", overflow: "hidden" }}>
-            
-            {/* Efecto de resplandor intenso detrás de la foto */}
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '180px',
-              height: '180px',
-              background: glowColor,
-              filter: 'blur(50px)',
-              borderRadius: '50%',
-              zIndex: 0,
-              pointerEvents: 'none'
-            }}/>
+            {/* Resplandor reactivo */}
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "180px",
+                height: "180px",
+                background: glowColor,
+                filter: "blur(50px)",
+                borderRadius: "50%",
+                zIndex: 0,
+                pointerEvents: "none"
+              }}
+            />
 
-            <div style={{ marginBottom: "1.25rem", position: 'relative', zIndex: 1 }}>
-              <span style={{
-                display: "inline-block",
-                background: currentArtist.category === "ogs" ? "rgba(245, 158, 11, 0.15)" : "rgba(59, 130, 246, 0.15)",
-                color: currentArtist.category === "ogs" ? "var(--accent-amber)" : "var(--accent-blue)",
-                border: `1px solid ${currentArtist.category === "ogs" ? "rgba(245, 158, 11, 0.35)" : "rgba(59, 130, 246, 0.35)"}`,
-                padding: "0.3rem 0.9rem",
-                borderRadius: "999px",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                fontSize: "0.75rem",
-                letterSpacing: "0.06em"
-              }}>
+            <div style={{ marginBottom: "1.25rem", position: "relative", zIndex: 1 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  background: currentArtist.category === "ogs" ? "rgba(245, 158, 11, 0.15)" : "rgba(59, 130, 246, 0.15)",
+                  color: currentArtist.category === "ogs" ? "var(--accent-amber)" : "var(--accent-blue)",
+                  border: `1px solid ${currentArtist.category === "ogs" ? "rgba(245, 158, 11, 0.35)" : "rgba(59, 130, 246, 0.35)"}`,
+                  padding: "0.3rem 0.9rem",
+                  borderRadius: "999px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  fontSize: "0.75rem",
+                  letterSpacing: "0.06em"
+                }}
+              >
                 {currentArtist.category === "ogs" ? "Categoría OG's" : "Categoría Actuales"}
               </span>
             </div>
 
             {currentArtist.spotifyImage && (
-              <motion.div 
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                style={{ marginBottom: "1.25rem", position: 'relative', zIndex: 1, display: 'inline-block' }}
+                style={{ marginBottom: "1.25rem", position: "relative", zIndex: 1, display: "inline-block" }}
               >
                 <img
                   src={currentArtist.spotifyImage}
@@ -184,7 +214,7 @@ export const Dashboard = () => {
               </motion.div>
             )}
 
-            <h2 className="artist-hero-name" style={{ position: 'relative', zIndex: 1 }}>{currentArtist.name}</h2>
+            <h2 className="artist-hero-name" style={{ position: "relative", zIndex: 1 }}>{currentArtist.name}</h2>
 
             <motion.a
               whileHover={{ scale: 1.05, filter: "brightness(1.1)" }}
@@ -200,12 +230,12 @@ export const Dashboard = () => {
                 borderRadius: "999px",
                 fontWeight: 700,
                 fontSize: "0.95rem",
-                position: 'relative',
+                position: "relative",
                 zIndex: 1
               }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
               </svg>
               Abrir en Spotify
             </motion.a>
@@ -242,28 +272,25 @@ export const Dashboard = () => {
 
             <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border)" }}>
               <h4 style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>
-                Actividad del grupo ({groupProgress.length})
+                Actividad del grupo ({allGroupMembers.length})
               </h4>
 
-              {groupProgress.length === 0 ? (
+              {allGroupMembers.length === 0 ? (
                 <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Sin registros para esta semana.</p>
               ) : (
-                <motion.ul 
+                <motion.ul
                   variants={containerVariants}
                   initial="hidden"
                   animate="show"
                   style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.6rem" }}
                 >
                   <AnimatePresence>
-                    {groupProgress.map(friend => {
-                      const meta = statusMeta[friend.status] || statusMeta.por_escuchar;
-                      const profile = usersData[friend.id]; 
-                      const finalName = profile?.username || friend.displayName;
-                      const finalPhoto = profile?.photoURL || null;
+                    {allGroupMembers.map((member) => {
+                      const meta = statusMeta[member.status] || statusMeta.por_escuchar;
 
                       return (
                         <motion.li
-                          key={friend.id}
+                          key={member.id}
                           variants={itemVariants}
                           layout
                           initial="hidden"
@@ -280,28 +307,59 @@ export const Dashboard = () => {
                             gap: "0.5rem"
                           }}
                         >
-                          <Link to={`/user/${friend.id}`} style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}>
-                            {finalPhoto ? (
-                              <img src={finalPhoto} alt="" style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${finalName}&background=1c1c21&color=fafafa`; }} />
+                          <Link
+                            to={`/user/${member.id}`}
+                            style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none", color: "inherit" }}
+                          >
+                            {member.photoURL ? (
+                              <img
+                                src={member.photoURL}
+                                alt=""
+                                style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(member.displayName)}&background=1c1c21&color=fafafa`;
+                                }}
+                              />
                             ) : (
-                              <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", border: "1px solid var(--border)" }}>👽</div>
+                              <div
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "var(--bg-elevated)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "0.8rem",
+                                  border: "1px solid var(--border)"
+                                }}
+                              >
+                                👽
+                              </div>
                             )}
-                            <span style={{ fontWeight: 500, fontSize: "0.92rem", transition: "color 0.2s" }} onMouseOver={(e) => e.target.style.color = "var(--accent-blue)"} onMouseOut={(e) => e.target.style.color = "var(--text-main)"}>
-                              {finalName}
+                            <span
+                              style={{ fontWeight: 500, fontSize: "0.92rem", transition: "color 0.2s" }}
+                              onMouseOver={(e) => (e.target.style.color = "var(--accent-blue)")}
+                              onMouseOut={(e) => (e.target.style.color = "var(--text-main)")}
+                            >
+                              {member.displayName}
                             </span>
                           </Link>
-                          
-                          <span style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                            fontSize: "0.78rem",
-                            padding: "0.25rem 0.65rem",
-                            borderRadius: "999px",
-                            fontWeight: 600,
-                            backgroundColor: meta.bg,
-                            color: meta.color
-                          }}>
+
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.4rem",
+                              fontSize: "0.78rem",
+                              padding: "0.25rem 0.65rem",
+                              borderRadius: "999px",
+                              fontWeight: 600,
+                              backgroundColor: meta.bg,
+                              color: meta.color
+                            }}
+                          >
                             <span className="dot" style={{ backgroundColor: meta.color }} />
                             {meta.label}
                           </span>
