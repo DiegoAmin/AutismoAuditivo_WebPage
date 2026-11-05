@@ -3,8 +3,7 @@ import { updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { motion, AnimatePresence } from "framer-motion";
-import { Reorder } from "framer-motion";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
 
 export const Profile = () => {
   const { user } = useAuth();
@@ -57,7 +56,7 @@ export const Profile = () => {
     fetchProfile();
   }, [user]);
 
-  // Buscador de Showcase Track
+  // Buscador de Showcase Track (usando fetch correcto al endpoint de Vercel)
   useEffect(() => {
     if (!showcaseQuery.trim() || showcaseQuery.length < 2) { setShowcaseResults([]); return; }
     const timer = setTimeout(async () => {
@@ -70,7 +69,7 @@ export const Profile = () => {
     return () => clearTimeout(timer);
   }, [showcaseQuery]);
 
-  // Buscador de Tops
+  // Buscador de Top Tracks
   useEffect(() => {
     if (!trackQuery.trim() || trackQuery.length < 2) { setTrackResults([]); return; }
     const timer = setTimeout(async () => {
@@ -83,6 +82,7 @@ export const Profile = () => {
     return () => clearTimeout(timer);
   }, [trackQuery]);
 
+  // Buscador de Top Albums
   useEffect(() => {
     if (!albumQuery.trim() || albumQuery.length < 2) { setAlbumResults([]); return; }
     const timer = setTimeout(async () => {
@@ -226,7 +226,30 @@ export const Profile = () => {
             )}
           </div>
 
-          {/* Lista renderizada con Drag & Drop */}
+          {/* TOP 5 CANCIONES */}
+          <div style={{ marginBottom: "2.5rem", padding: "1.5rem", backgroundColor: "var(--bg-main)", borderRadius: "16px", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>Top Canciones</h3>
+              <span style={{ fontSize: "0.8rem", fontWeight: 600, color: topTracks.length === 5 ? "var(--accent-amber)" : "var(--text-muted)" }}>{topTracks.length} / 5</span>
+            </div>
+            
+            {topTracks.length < 5 && (
+              <div style={{ position: "relative", marginBottom: "1rem" }}>
+                <input type="text" className="input-field" placeholder="Busca una canción..." value={trackQuery} onChange={(e) => setTrackQuery(e.target.value)} style={{ width: "100%" }} />
+                {trackResults.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", zIndex: 10, marginTop: "4px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 10px 25px rgba(0,0,0,0.6)" }}>
+                    {trackResults.map((t, idx) => (
+                      <div key={idx} onClick={() => handleAddTrack(t)} style={{ padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }} onMouseOver={(e) => e.currentTarget.style.background = "var(--bg-elevated)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                        {t.image && <img src={t.image} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", objectFit: "cover" }} />}
+                        <div style={{ fontSize: "0.85rem" }}><strong>{t.name}</strong> <span style={{ color: "var(--text-muted)" }}>({t.artist})</span></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Drag & Drop para Top Canciones */}
             <Reorder.Group 
               axis="y" 
               values={topTracks} 
@@ -237,23 +260,50 @@ export const Profile = () => {
                 <Reorder.Item 
                   key={t.id || `${t.name}-${idx}`} 
                   value={t} 
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", border: "1px solid var(--border)", padding: "0.55rem 0.85rem", borderRadius: "10px", cursor: "grab" }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", border: "1px solid var(--border)", padding: "0.55rem 0.85rem", borderRadius: "10px", cursor: "grab", userSelect: "none" }}
+                  whileDrag={{ scale: 1.02, boxShadow: "0 8px 20px rgba(0,0,0,0.3)", zIndex: 10 }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 800, color: "var(--accent-amber)", width: "15px" }}>{idx + 1}</span>
-                    <span style={{ color: "var(--text-muted)", opacity: 0.5 }}>⋮⋮</span>
+                    <span style={{ fontWeight: 800, color: "var(--accent-amber)", width: "15px", textAlign: "center" }}>{idx + 1}</span>
+                    <span style={{ color: "var(--text-muted)", opacity: 0.5, cursor: "grab" }}>⋮⋮</span>
                     {t.image && <img src={t.image} alt="" style={{ width: "32px", height: "32px", borderRadius: "6px", objectFit: "cover" }} />}
-                    <div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
                       <strong style={{ display: "block" }}>{t.name}</strong>
                       <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>{t.artist}</span>
                     </div>
                   </div>
-                  <button type="button" onClick={() => setTopTracks(topTracks.filter((_, i) => i !== idx))} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer" }}>✕</button>
+                  <button type="button" onClick={() => setTopTracks(topTracks.filter((_, i) => i !== idx))} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "1.1rem", padding: "0.2rem" }}>
+                    ✕
+                  </button>
                 </Reorder.Item>
               ))}
             </Reorder.Group>
+          </div>
 
-          {/* Lista renderizada con Drag & Drop */}
+          {/* TOP 5 ÁLBUMES */}
+          <div style={{ marginBottom: "2.5rem", padding: "1.5rem", backgroundColor: "var(--bg-main)", borderRadius: "16px", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>Top Álbumes</h3>
+              <span style={{ fontSize: "0.8rem", fontWeight: 600, color: topAlbums.length === 5 ? "var(--accent-amber)" : "var(--text-muted)" }}>{topAlbums.length} / 5</span>
+            </div>
+            
+            {topAlbums.length < 5 && (
+              <div style={{ position: "relative", marginBottom: "1rem" }}>
+                <input type="text" className="input-field" placeholder="Busca un álbum..." value={albumQuery} onChange={(e) => setAlbumQuery(e.target.value)} style={{ width: "100%" }} />
+                {albumResults.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "8px", zIndex: 10, marginTop: "4px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 10px 25px rgba(0,0,0,0.6)" }}>
+                    {albumResults.map((a, idx) => (
+                      <div key={idx} onClick={() => handleAddAlbum(a)} style={{ padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", borderBottom: "1px solid var(--border)" }} onMouseOver={(e) => e.currentTarget.style.background = "var(--bg-elevated)"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                        {a.image && <img src={a.image} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", objectFit: "cover" }} />}
+                        <div style={{ fontSize: "0.85rem" }}><strong>{a.name}</strong> <span style={{ color: "var(--text-muted)" }}>({a.artist})</span></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Drag & Drop para Top Álbumes */}
             <Reorder.Group 
               axis="y" 
               values={topAlbums} 
@@ -264,21 +314,25 @@ export const Profile = () => {
                 <Reorder.Item 
                   key={a.id || `${a.name}-${idx}`} 
                   value={a} 
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", border: "1px solid var(--border)", padding: "0.55rem 0.85rem", borderRadius: "10px", cursor: "grab" }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", border: "1px solid var(--border)", padding: "0.55rem 0.85rem", borderRadius: "10px", cursor: "grab", userSelect: "none" }}
+                  whileDrag={{ scale: 1.02, boxShadow: "0 8px 20px rgba(0,0,0,0.3)", zIndex: 10 }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 800, color: "var(--accent-amber)", width: "15px" }}>{idx + 1}</span>
-                    <span style={{ color: "var(--text-muted)", opacity: 0.5 }}>⋮⋮</span>
+                    <span style={{ fontWeight: 800, color: "var(--accent-amber)", width: "15px", textAlign: "center" }}>{idx + 1}</span>
+                    <span style={{ color: "var(--text-muted)", opacity: 0.5, cursor: "grab" }}>⋮⋮</span>
                     {a.image && <img src={a.image} alt="" style={{ width: "32px", height: "32px", borderRadius: "6px", objectFit: "cover" }} />}
-                    <div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
                       <strong style={{ display: "block" }}>{a.name}</strong>
                       <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>{a.artist}</span>
                     </div>
                   </div>
-                  <button type="button" onClick={() => setTopAlbums(topAlbums.filter((_, i) => i !== idx))} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer" }}>✕</button>
+                  <button type="button" onClick={() => setTopAlbums(topAlbums.filter((_, i) => i !== idx))} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", fontSize: "1.1rem", padding: "0.2rem" }}>
+                    ✕
+                  </button>
                 </Reorder.Item>
               ))}
             </Reorder.Group>
+          </div>
 
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={isSaving} className="btn" style={{ width: "100%", backgroundColor: "var(--accent-green)", color: "#000", fontWeight: 800, padding: "1rem", borderRadius: "999px" }}>
             {isSaving ? "Guardando en la nube..." : "Guardar Perfil"}
