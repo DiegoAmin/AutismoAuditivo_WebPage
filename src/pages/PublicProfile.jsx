@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config.js";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { FastAverageColor } from "fast-average-color";
 
 export const PublicProfile = () => {
@@ -120,6 +120,7 @@ export const PublicProfile = () => {
                   inset: 0,
                   background: "rgba(9, 9, 11, 0.88)",
                   backdropFilter: "blur(6px)",
+                  borderRadius: "14px", 
                   padding: "0.85rem",
                   display: "flex",
                   flexDirection: "column",
@@ -167,17 +168,16 @@ export const PublicProfile = () => {
           <div 
             style={{
               position: "absolute",
-              top: "-40px", 
+              top: "-40px",
               left: "-40px",
               right: "-40px",
-              height: "550px", 
+              height: "550px",
               backgroundImage: `url(${showcaseTrack.image})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
-              filter: "blur(15px)", 
-              opacity: 0.45, 
+              filter: "blur(60px)",
+              opacity: 0.45,
               zIndex: 0,
-              // Hacemos que el desvanecimiento empiece más arriba (15%) y termine casi al final (95%)
               maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 95%)",
               WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 95%)"
             }}
