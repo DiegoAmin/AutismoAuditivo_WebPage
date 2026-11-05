@@ -3,6 +3,7 @@ import { collection, onSnapshot, setDoc, doc, updateDoc } from "firebase/firesto
 import { db } from "../firebase/config.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { motion, AnimatePresence } from "framer-motion";
+import { FastAverageColor } from "fast-average-color";
 
 export const Roulette = () => {
   const { isAdmin } = useAuth();
@@ -17,11 +18,14 @@ export const Roulette = () => {
   const [spinCount, setSpinCount] = useState(0);
   const [isCrowning, setIsCrowning] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
+  
+  // Colores reactivos
+  const [glowColor, setGlowColor] = useState("var(--accent-green)");
+  const [glowBg, setGlowBg] = useState("rgba(30, 215, 96, 0.15)");
 
-  // Lectura en tiempo real de la base de datos real
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "artists"), (snapshot) => {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setArtists(data);
     });
     return () => unsubscribe();
@@ -43,8 +47,37 @@ export const Roulette = () => {
     setWinner(null);
     setDisplayedArtist(null);
     setStatusMessage(null);
+    setGlowColor("var(--accent-green)");
+    setGlowBg("rgba(30, 215, 96, 0.15)");
+    document.body.style.backgroundImage = "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 185, 84, 0.08), transparent)";
   };
 
+  // Efecto de color explosivo al sacar al Ganador
+  useEffect(() => {
+    if (winner && winner.spotifyImage) {
+      const fac = new FastAverageColor();
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = winner.spotifyImage;
+
+      img.onload = () => {
+        try {
+          const color = fac.getColor(img);
+          const [r, g, b] = color.value;
+          setGlowColor(`rgb(${r}, ${g}, ${b})`);
+          setGlowBg(`rgba(${r}, ${g}, ${b}, 0.25)`);
+          
+          // Estallido al fondo
+          document.body.style.backgroundImage = `radial-gradient(ellipse 95% 75% at 50% -10%, rgba(${r}, ${g}, ${b}, 0.2), transparent)`;
+          fac.destroy();
+        } catch (e) {
+          console.error("Error al extraer color:", e);
+        }
+      };
+    }
+  }, [winner]);
+
+  // Animación de Suspenso (Aceleración y Frenado)
   const spin = () => {
     if (!isAdmin) return;
     if (rouletteCandidates.length === 0) {
@@ -55,25 +88,42 @@ export const Roulette = () => {
     setStatusMessage(null);
     setIsSpinning(true);
     setWinner(null);
-    let ticks = 0;
+    setGlowColor("var(--border)");
+    setGlowBg("transparent");
+    
+    document.body.style.backgroundImage = "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 255, 255, 0.03), transparent)";
 
-    const interval = setInterval(() => {
+    const maxTicks = 45; 
+    let currentTick = 0;
+    let delay = 40; 
+
+    const tick = () => {
       const randomIdx = Math.floor(Math.random() * rouletteCandidates.length);
       setDisplayedArtist(rouletteCandidates[randomIdx]);
-      ticks++;
+      currentTick++;
 
-      if (ticks >= 32) {
-        clearInterval(interval);
+      if (currentTick >= maxTicks) {
+        // Tiro final
         const landedArtist = rouletteCandidates[Math.floor(Math.random() * rouletteCandidates.length)];
         setDisplayedArtist(landedArtist);
         setSpinCount(prev => {
           const nextCount = prev + 1;
           if (nextCount === 3) setWinner(landedArtist);
+          else setGlowColor("var(--text-main)"); // Color neutro si es descarte
           return nextCount;
         });
         setIsSpinning(false);
+      } else {
+        // Lógica de frenado dramático
+        if (currentTick > maxTicks - 5) delay += 80;
+        else if (currentTick > maxTicks - 10) delay += 40;
+        else if (currentTick > maxTicks - 15) delay += 15;
+        
+        setTimeout(tick, delay);
       }
-    }, 75);
+    };
+
+    tick();
   };
 
   const setArtistOfTheWeek = async () => {
@@ -85,7 +135,6 @@ export const Roulette = () => {
       let finalImg = winner.spotifyImage || null;
       let finalUrl = winner.spotifyUrl || null;
 
-      // Fallback por si acaso le falta la foto
       if (!finalImg) {
         try {
           const res = await fetch(`/api/spotify?artist=${encodeURIComponent(winner.name.trim())}`);
@@ -224,10 +273,12 @@ export const Roulette = () => {
         </div>
 
         {/* CONTENEDOR DEL ARTISTA SELECCIONADO */}
-        <div
+        <motion.div
+          animate={{ boxShadow: winner ? `0 0 45px ${glowBg}` : "inset 0 4px 20px rgba(0,0,0,0.5)", borderColor: glowColor }}
+          transition={{ duration: 0.5 }}
           style={{
             background: "var(--bg-main)",
-            border: `1px solid ${winner ? "var(--accent-green)" : "var(--border)"}`,
+            border: `1px solid ${glowColor}`,
             borderRadius: "18px",
             padding: "2.5rem 1.5rem",
             marginBottom: "2rem",
@@ -236,8 +287,7 @@ export const Roulette = () => {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            position: "relative",
-            boxShadow: winner ? "0 0 35px rgba(30, 215, 96, 0.15)" : "inset 0 4px 20px rgba(0,0,0,0.5)"
+            position: "relative"
           }}
         >
           {displayedArtist ? (
@@ -247,25 +297,29 @@ export const Roulette = () => {
                   key={displayedArtist.id || displayedArtist.name}
                   src={displayedArtist.spotifyImage}
                   alt={displayedArtist.name}
-                  animate={{ scale: isSpinning ? [1, 1.05, 1] : 1 }}
-                  transition={{ duration: 0.15, repeat: isSpinning ? Infinity : 0 }}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: isSpinning ? [1, 1.08, 1] : 1, opacity: 1 }}
+                  transition={{ duration: isSpinning ? 0.15 : 0.3, repeat: isSpinning ? Infinity : 0 }}
                   style={{
                     width: "110px",
                     height: "110px",
                     borderRadius: "50%",
                     objectFit: "cover",
                     marginBottom: "1rem",
-                    border: `2px solid ${winner ? "var(--accent-green)" : "var(--border)"}`,
-                    boxShadow: "0 10px 25px rgba(0,0,0,0.6)"
+                    border: `2px solid ${glowColor}`,
+                    boxShadow: winner ? `0 10px 35px ${glowBg}` : "0 10px 25px rgba(0,0,0,0.6)"
                   }}
                 />
               ) : (
                 <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>🎤</div>
               )}
 
-              <h2 style={{ fontSize: "clamp(1.6rem, 4vw, 2.4rem)", fontWeight: 800, margin: 0, color: winner ? "var(--accent-green)" : "var(--text-main)" }}>
+              <motion.h2 
+                animate={{ color: glowColor }}
+                style={{ fontSize: "clamp(1.6rem, 4vw, 2.4rem)", fontWeight: 800, margin: 0 }}
+              >
                 {displayedArtist.name}
-              </h2>
+              </motion.h2>
             </>
           ) : (
             <p style={{ color: "var(--text-muted)", fontSize: "1.05rem", fontStyle: "italic", margin: 0 }}>
@@ -278,71 +332,56 @@ export const Roulette = () => {
               {spinCount === 1 ? "1er descarte completado." : "2do descarte completado. ¡El siguiente tiro es el definitivo!"}
             </p>
           )}
-        </div>
+        </motion.div>
 
-        {/* BOTÓN DE TIRO (ADMIN ONLY) */}
-        {spinCount < 3 && (
-          <motion.button
-            whileHover={isAdmin && !isSpinning ? { scale: 1.03 } : {}}
-            whileTap={isAdmin && !isSpinning ? { scale: 0.97 } : {}}
+        {/* BOTON DE TIRAR (Visible si no hay ganador aún) */}
+        {!winner && isAdmin && spinCount < 3 && (
+          <button
             onClick={spin}
-            disabled={isSpinning || !isAdmin || rouletteCandidates.length === 0}
+            disabled={isSpinning || rouletteCandidates.length === 0}
             className="btn"
             style={{
               width: "100%",
-              maxWidth: "360px",
-              padding: "1rem 2rem",
-              fontSize: "1rem",
+              backgroundColor: "var(--text-main)",
+              color: "#000",
               fontWeight: 800,
-              backgroundColor: spinCount === 2 ? "var(--accent-red)" : "var(--accent-green)",
-              color: "#000000",
-              opacity: !isAdmin ? 0.45 : 1,
-              cursor: !isAdmin ? "not-allowed" : "pointer",
+              padding: "1rem",
+              fontSize: "1.1rem",
               borderRadius: "999px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.5)"
+              justifyContent: "center",
+              boxShadow: "0 8px 25px rgba(255,255,255,0.15)"
             }}
           >
-            {isSpinning
-              ? "Seleccionando..."
-              : spinCount === 0
-              ? "Girar primer tiro (1/3)"
-              : spinCount === 1
-              ? "Girar segundo tiro (2/3)"
-              : "Ejecutar tiro definitivo (3/3)"}
-          </motion.button>
+            {isSpinning ? "Girando..." : spinCount === 0 ? "Tirar Ruleta (1/3)" : spinCount === 1 ? "Tirar Ruleta (2/3)" : "Tiro Final (3/3)"}
+          </button>
         )}
 
-        {/* ACCIONES DEL GANADOR CORONADO */}
-        {winner && !isSpinning && isAdmin && (
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.85rem", maxWidth: "420px", margin: "1rem auto 0" }}
-          >
-            <p style={{ color: "var(--accent-green)", fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Artista Definitivo
-            </p>
-
+        {/* ACCIONES DEL GANADOR */}
+        {winner && isAdmin && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            
             {listType === "suggestion" && (
               <button
                 type="button"
                 onClick={promoteToOfficial}
                 className="btn"
-                style={{ width: "100%", backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border)", color: "#fff", padding: "0.75rem" }}
+                style={{ width: "100%", justifyContent: "center", backgroundColor: "transparent", border: "1px solid var(--border)", color: "#fff", padding: "0.75rem" }}
               >
                 Mover a Lista Oficial
               </button>
             )}
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="button"
               onClick={setArtistOfTheWeek}
               disabled={isCrowning}
               className="btn"
-              style={{ width: "100%", backgroundColor: "var(--accent-green)", color: "#000", fontWeight: 800, padding: "0.85rem", borderRadius: "999px" }}
+              style={{ width: "100%", backgroundColor: glowColor, color: "#000", fontWeight: 800, padding: "0.85rem", borderRadius: "999px", boxShadow: `0 6px 20px ${glowBg}` }}
             >
               {isCrowning ? "Sincronizando..." : "Coronar como Artista de la Semana"}
-            </button>
+            </motion.button>
 
             <button
               type="button"
