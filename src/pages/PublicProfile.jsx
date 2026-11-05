@@ -166,12 +166,12 @@ export const PublicProfile = () => {
                     style={{ width: "70px", height: "70px", borderRadius: "10px", objectFit: "cover", boxShadow: "0 8px 20px rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
                   />
                 )}
-                <span style={{ position: "absolute", bottom: "-4px", right: "-4px", background: "var(--accent-amber)", borderRadius: "50%", padding: "3px", fontSize: "0.7rem", display: "flex" }}>⚡</span>
+                <span style={{ position: "absolute", bottom: "-4px", right: "-4px", background: "var(--accent-amber)", borderRadius: "50%", padding: "3px", fontSize: "0.7rem", display: "flex" }}>🔥</span>
               </div>
               
               <div style={{ minWidth: 0, flex: 1 }}>
                 <span style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--accent-amber)", display: "block", marginBottom: "0.2rem" }}>
-                  Obsesión Actual / Himno
+                  BANGER
                 </span>
                 <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: "0 0 0.15rem 0", wordBreak: "break-word", lineHeight: 1.2 }}>{showcaseTrack.name}</h3>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{showcaseTrack.artist}</p>
