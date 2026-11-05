@@ -175,7 +175,7 @@ export const PublicProfile = () => {
               backgroundImage: `url(${showcaseTrack.image})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
-              filter: "blur(60px)",
+              filter: "blur(25px)",
               opacity: 0.45,
               zIndex: 0,
               maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 95%)",
