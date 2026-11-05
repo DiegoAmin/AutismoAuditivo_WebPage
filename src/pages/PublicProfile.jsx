@@ -149,33 +149,32 @@ export const PublicProfile = () => {
               background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(18, 18, 23, 0.95) 100%)",
               border: "1px solid rgba(245, 158, 11, 0.35)",
               borderRadius: "20px",
-              padding: "1.5rem 2rem",
+              padding: "1.25rem",
               marginBottom: "3rem",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "1.5rem",
+              flexDirection: "column", // Se apila en móvil para evitar que se desborde
+              gap: "1rem",
               boxShadow: "0 12px 30px rgba(0,0,0,0.4)"
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-              <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", width: "100%" }}>
+              <div style={{ position: "relative", flexShrink: 0 }}>
                 {showcaseTrack.image && (
                   <img
                     src={showcaseTrack.image}
                     alt=""
-                    style={{ width: "85px", height: "85px", borderRadius: "12px", objectFit: "cover", boxShadow: "0 8px 20px rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    style={{ width: "70px", height: "70px", borderRadius: "10px", objectFit: "cover", boxShadow: "0 8px 20px rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
                   />
                 )}
-                <span style={{ position: "absolute", bottom: "-6px", right: "-6px", background: "var(--accent-amber)", borderRadius: "50%", padding: "4px", fontSize: "0.8rem", display: "flex" }}>⚡</span>
+                <span style={{ position: "absolute", bottom: "-4px", right: "-4px", background: "var(--accent-amber)", borderRadius: "50%", padding: "3px", fontSize: "0.7rem", display: "flex" }}>⚡</span>
               </div>
-              <div>
-                <span style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--accent-amber)", display: "block", marginBottom: "0.25rem" }}>
+              
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--accent-amber)", display: "block", marginBottom: "0.2rem" }}>
                   Obsesión Actual / Himno
                 </span>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0 0 0.2rem 0" }}>{showcaseTrack.name}</h3>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: 0 }}>{showcaseTrack.artist}</p>
+                <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: "0 0 0.15rem 0", wordBreak: "break-word", lineHeight: 1.2 }}>{showcaseTrack.name}</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{showcaseTrack.artist}</p>
               </div>
             </div>
 
@@ -189,9 +188,11 @@ export const PublicProfile = () => {
                   backgroundColor: "var(--accent-green)",
                   color: "#000",
                   fontWeight: 800,
-                  fontSize: "0.85rem",
-                  padding: "0.7rem 1.4rem",
+                  fontSize: "0.82rem",
+                  padding: "0.6rem 1rem",
                   borderRadius: "999px",
+                  width: "100%",
+                  justifyContent: "center",
                   boxShadow: "0 6px 18px rgba(30, 215, 96, 0.25)"
                 }}
               >
