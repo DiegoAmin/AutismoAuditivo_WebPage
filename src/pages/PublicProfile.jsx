@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config.js";
 import { motion, AnimatePresence } from "framer-motion";
+import { FastAverageColor } from "fast-average-color";
 
 export const PublicProfile = () => {
   const { uid } = useParams();
@@ -12,6 +13,10 @@ export const PublicProfile = () => {
 
   const [hoveredTrackIndex, setHoveredTrackIndex] = useState(null);
   const [hoveredAlbumIndex, setHoveredAlbumIndex] = useState(null);
+  
+  // Estado para el color reactivo del BANGER
+  const [glowColor, setGlowColor] = useState("rgba(245, 158, 11, 1)");
+  const [glowBg, setGlowBg] = useState("rgba(245, 158, 11, 0.12)");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -30,6 +35,44 @@ export const PublicProfile = () => {
     if (uid) fetchProfile();
   }, [uid]);
 
+  const showcaseTrack = profile?.showcaseTrack;
+  const topTracks = profile?.topTracks || [];
+  const topAlbums = profile?.topAlbums || [];
+
+  // Extracción del color dominante del BANGER
+  useEffect(() => {
+    if (showcaseTrack && showcaseTrack.image) {
+      const fac = new FastAverageColor();
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = showcaseTrack.image;
+
+      img.onload = () => {
+        try {
+          const color = fac.getColor(img);
+          const [r, g, b] = color.value;
+          
+          // Se aplica al fondo de la pantalla completa
+          document.body.style.backgroundImage = `radial-gradient(ellipse 95% 65% at 50% -10%, rgba(${r}, ${g}, ${b}, 0.16), transparent)`;
+          
+          // Se guardan los colores puros y con opacidad para los bordes/resplandores
+          setGlowColor(`rgb(${r}, ${g}, ${b})`);
+          setGlowBg(`rgba(${r}, ${g}, ${b}, 0.15)`);
+          
+          fac.destroy();
+        } catch (e) {
+          console.error("Error al extraer color de la rola:", e);
+        }
+      };
+    }
+
+    // Limpiador: Cuando salgamos del Perfil, regresamos el body a su estado neutral
+    return () => {
+      document.body.style.backgroundImage = "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 185, 84, 0.08), transparent)";
+    };
+  }, [showcaseTrack?.image]);
+
+
   if (loading) return <div style={{ textAlign: "center", padding: "4rem", color: "var(--text-muted)" }}>Buscando en la base de datos... 👽</div>;
 
   if (!profile) return (
@@ -40,9 +83,6 @@ export const PublicProfile = () => {
     </div>
   );
 
-  const showcaseTrack = profile.showcaseTrack;
-  const topTracks = profile.topTracks || [];
-  const topAlbums = profile.topAlbums || [];
 
   const renderGrid = (items, type, hoveredIndex, setHoveredIndex) => {
     if (items.length === 0) {
@@ -64,7 +104,7 @@ export const PublicProfile = () => {
                 overflow: "hidden",
                 position: "relative",
                 aspectRatio: "1 / 1",
-                boxShadow: isHovered ? "0 16px 30px rgba(0,0,0,0.6)" : "none"
+                boxShadow: isHovered ? `0 16px 30px ${glowBg}` : "none"
               }}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
@@ -75,7 +115,7 @@ export const PublicProfile = () => {
                 <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3rem", backgroundColor: "#111" }}>{type === 'canciones' ? '🎵' : '💿'}</div>
               )}
 
-              <span style={{ position: "absolute", top: "10px", left: "10px", background: "var(--accent-amber)", color: "#000", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.8rem", fontWeight: 800, zIndex: 2 }}>
+              <span style={{ position: "absolute", top: "10px", left: "10px", background: glowColor, color: "#000", padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.8rem", fontWeight: 800, zIndex: 2 }}>
                 #{idx + 1}
               </span>
 
@@ -102,7 +142,7 @@ export const PublicProfile = () => {
                 <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.8rem" }}>{item.artist}</span>
 
                 {item.url && (
-                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn" style={{ backgroundColor: "var(--accent-green)", color: "#000", padding: "0.35rem 0.8rem", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700 }}>
+                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="btn" style={{ backgroundColor: glowColor, color: "#000", padding: "0.35rem 0.8rem", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700 }}>
                     Escuchar
                   </a>
                 )}
@@ -126,10 +166,10 @@ export const PublicProfile = () => {
         ← Volver
       </button>
 
-      <section className="card" style={{ padding: "2.5rem 2rem" }}>
+      <section className="card" style={{ padding: "2.5rem 2rem", border: `1px solid ${glowBg}`, boxShadow: `0 20px 50px -15px ${glowBg}` }}>
         {/* CABECERA */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "2.5rem" }}>
-          <div style={{ width: "120px", height: "120px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", border: "3px solid var(--accent-blue)", overflow: "hidden", marginBottom: "1.25rem", boxShadow: "0 10px 25px rgba(0,0,0,0.5)" }}>
+          <div style={{ width: "120px", height: "120px", borderRadius: "50%", backgroundColor: "var(--bg-elevated)", border: `3px solid ${glowColor}`, overflow: "hidden", marginBottom: "1.25rem", boxShadow: `0 10px 30px ${glowBg}` }}>
             <img 
               src={profile.photoURL || `https://ui-avatars.com/api/?name=${profile.username || "User"}&background=1c1c21&color=fafafa`} 
               alt="Avatar" 
@@ -146,15 +186,15 @@ export const PublicProfile = () => {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             style={{
-              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(18, 18, 23, 0.95) 100%)",
-              border: "1px solid rgba(245, 158, 11, 0.35)",
+              background: `linear-gradient(135deg, ${glowBg} 0%, rgba(18, 18, 23, 0.95) 100%)`,
+              border: `1px solid ${glowColor}`,
               borderRadius: "20px",
               padding: "1.25rem",
               marginBottom: "3rem",
               display: "flex",
-              flexDirection: "column", // Se apila en móvil para evitar que se desborde
+              flexDirection: "column", 
               gap: "1rem",
-              boxShadow: "0 12px 30px rgba(0,0,0,0.4)"
+              boxShadow: `0 12px 30px ${glowBg}`
             }}
           >
             <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", width: "100%" }}>
@@ -163,14 +203,14 @@ export const PublicProfile = () => {
                   <img
                     src={showcaseTrack.image}
                     alt=""
-                    style={{ width: "70px", height: "70px", borderRadius: "10px", objectFit: "cover", boxShadow: "0 8px 20px rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    style={{ width: "70px", height: "70px", borderRadius: "10px", objectFit: "cover", boxShadow: `0 8px 20px rgba(0,0,0,0.6)`, border: "1px solid rgba(255,255,255,0.1)" }}
                   />
                 )}
-                <span style={{ position: "absolute", bottom: "-4px", right: "-4px", background: "var(--accent-amber)", borderRadius: "50%", padding: "3px", fontSize: "0.7rem", display: "flex" }}>🔥</span>
+                <span style={{ position: "absolute", bottom: "-4px", right: "-4px", background: glowColor, borderRadius: "50%", padding: "3px", fontSize: "0.7rem", display: "flex" }}>🔥</span>
               </div>
               
               <div style={{ minWidth: 0, flex: 1 }}>
-                <span style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: "var(--accent-amber)", display: "block", marginBottom: "0.2rem" }}>
+                <span style={{ fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 800, color: glowColor, display: "block", marginBottom: "0.2rem" }}>
                   BANGER
                 </span>
                 <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: "0 0 0.15rem 0", wordBreak: "break-word", lineHeight: 1.2 }}>{showcaseTrack.name}</h3>
@@ -185,7 +225,7 @@ export const PublicProfile = () => {
                 rel="noopener noreferrer"
                 className="btn"
                 style={{
-                  backgroundColor: "var(--accent-green)",
+                  backgroundColor: glowColor,
                   color: "#000",
                   fontWeight: 800,
                   fontSize: "0.82rem",
@@ -193,7 +233,7 @@ export const PublicProfile = () => {
                   borderRadius: "999px",
                   width: "100%",
                   justifyContent: "center",
-                  boxShadow: "0 6px 18px rgba(30, 215, 96, 0.25)"
+                  boxShadow: `0 6px 18px ${glowBg}`
                 }}
               >
                 Escuchar en Spotify
