@@ -21,7 +21,7 @@ export const Reviews = () => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
-  
+
   const [favoriteTracks, setFavoriteTracks] = useState([]);
   const [trackQuery, setTrackQuery] = useState("");
   const [trackResults, setTrackResults] = useState([]);
@@ -31,7 +31,7 @@ export const Reviews = () => {
   const [albumResults, setAlbumResults] = useState([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [activeCommentReviewId, setActiveCommentReviewId] = useState(null);
   const [replyText, setReplyText] = useState("");
 
@@ -132,7 +132,7 @@ export const Reviews = () => {
         comments: existingReview?.comments || [],
         updatedAt: new Date()
       });
-    } catch (error) { console.error("Error al guardar reseña:", error); } 
+    } catch (error) { console.error("Error al guardar reseña:", error); }
     finally { setIsSubmitting(false); }
   };
 
@@ -180,7 +180,7 @@ export const Reviews = () => {
 
   const handleDeleteComment = async (reviewId, commentsList, commentId) => {
     const updated = commentsList.filter(c => c.id !== commentId);
-    try { await updateDoc(doc(db, "reviews", reviewId), { comments: updated }); } 
+    try { await updateDoc(doc(db, "reviews", reviewId), { comments: updated }); }
     catch (error) { console.error("Error al borrar comentario:", error); }
   };
 
@@ -201,8 +201,8 @@ export const Reviews = () => {
   };
 
   return (
-    <motion.main 
-      className="page-container" 
+    <motion.main
+      className="page-container"
       style={{ maxWidth: "900px" }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -236,13 +236,13 @@ export const Reviews = () => {
                 </div>
                 <div className="star-rating" onMouseLeave={() => setHoverRating(0)}>
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <motion.button 
-                      whileHover={{ scale: 1.2 }} 
-                      whileTap={{ scale: 0.9 }} 
-                      key={star} 
-                      type="button" 
-                      className={`star-btn ${star <= (hoverRating || rating) ? "active" : ""}`} 
-                      onClick={() => setRating(star)} 
+                    <motion.button
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                      key={star}
+                      type="button"
+                      className={`star-btn ${star <= (hoverRating || rating) ? "active" : ""}`}
+                      onClick={() => setRating(star)}
                       onMouseEnter={() => setHoverRating(star)}
                     >
                       <StarIcon filled={star <= (hoverRating || rating)} size={26} />
@@ -273,7 +273,7 @@ export const Reviews = () => {
                     )}
                   </AnimatePresence>
                 </div>
-                
+
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                   <AnimatePresence>
                     {favoriteTracks.map((t, idx) => (
@@ -328,7 +328,7 @@ export const Reviews = () => {
             <motion.h4 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>
               Reseñas del grupo ({artistReviews.length})
             </motion.h4>
-            
+
             <motion.div variants={containerVariants} initial="hidden" animate="show" className="reviews-list">
               <AnimatePresence>
                 {artistReviews.map((rev) => {
@@ -382,10 +382,38 @@ export const Reviews = () => {
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
                           {Object.entries(reactions).map(([emoji, usersArray]) => {
                             const hasReacted = usersArray.includes(user?.uid);
-                            const reactorsNames = usersArray.map(uid => usersData[uid]?.username || "Usuario").join(", ");
+
+                            // Fallback inteligente para obtener el nombre real de cada persona
+                            const reactorsNames = usersArray.map(uid => {
+                              if (uid === user?.uid) return "Tú";
+                              const member = usersData[uid];
+                              return member?.username || member?.displayName || "Miembro";
+                            }).join(", ");
+
                             return (
-                              <motion.button whileTap={{ scale: 0.85 }} key={emoji} type="button" title={reactorsNames} onClick={() => handleReaction(rev.id, { emoji }, reactions)} style={{ background: hasReacted ? "var(--bg-elevated)" : "var(--bg-main)", border: `1px solid ${hasReacted ? "var(--accent-blue)" : "var(--border)"}`, borderRadius: "20px", padding: "0.2rem 0.6rem", fontSize: "0.82rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem", color: "var(--text-main)" }}>
-                                <span>{emoji}</span><span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>{usersArray.length}</span>
+                              <motion.button
+                                whileTap={{ scale: 0.85 }}
+                                key={emoji}
+                                type="button"
+                                title={reactorsNames}
+                                onClick={() => handleReaction(rev.id, { emoji }, reactions)}
+                                style={{
+                                  background: hasReacted ? "var(--bg-elevated)" : "var(--bg-main)",
+                                  border: `1px solid ${hasReacted ? "var(--accent-blue)" : "var(--border)"}`,
+                                  borderRadius: "20px",
+                                  padding: "0.2rem 0.6rem",
+                                  fontSize: "0.82rem",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "0.3rem",
+                                  color: "var(--text-main)"
+                                }}
+                              >
+                                <span>{emoji}</span>
+                                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                                  {usersArray.length}
+                                </span>
                               </motion.button>
                             );
                           })}
