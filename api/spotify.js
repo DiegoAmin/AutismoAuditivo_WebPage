@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
     // Búsqueda de álbumes
     if (searchAlbum) {
-      const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchAlbum)}&type=album&limit=5`, {
+      const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchAlbum)}&type=album&limit=10`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
